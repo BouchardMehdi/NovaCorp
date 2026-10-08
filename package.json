@@ -27,7 +27,16 @@
     "n8n:stop": "docker compose --profile automation stop n8n",
     "n8n:logs": "docker compose --profile automation logs --tail 100 n8n",
     "n8n:setup": "node scripts/n8n-setup.mjs",
-    "n8n:verify": "node scripts/n8n-verify.mjs"
+    "n8n:verify": "node scripts/n8n-verify.mjs",
+    "llm:start": "docker compose --profile automation up -d --wait ollama",
+    "llm:pull": "docker compose --profile automation exec -T ollama ollama pull qwen3:1.7b",
+    "llm:stop": "docker compose --profile automation stop ollama",
+    "n8n:qualification:build": "node scripts/build-qualification-workflows.mjs",
+    "n8n:qualification:install": "npm run n8n:qualification:build && node scripts/install-qualification-workflows.mjs",
+    "n8n:qualification:start": "node scripts/start-qualification-workflows.mjs",
+    "n8n:qualification:stop": "node scripts/stop-qualification-workflows.mjs",
+    "n8n:qualification:test": "node --test tests/qualification.unit.mjs",
+    "n8n:qualification:verify": "node --env-file=.env.local scripts/verify-qualification.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

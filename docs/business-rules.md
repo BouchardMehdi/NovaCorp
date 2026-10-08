@@ -82,7 +82,7 @@ La base contrôle les dates et calcule les congés. Elle bloque la superposition
 
 Un doublon potentiel compare le type, le titre normalisé, les dates/demi-journées, le montant et la quantité aux demandes actives ou approuvées. Il est signalé, sans refus automatique : deux commandes identiques peuvent être légitimes.
 
-n8n pourra transmettre ce résultat au LLM pour produire la synthèse du validateur et un brouillon de réponse. Le LLM ne remplace pas le calcul du solde ni les contrôles d'autorisation. Sa connexion et le workflow IA restent à développer.
+n8n pourra transmettre ce résultat au LLM pour produire la synthèse du validateur et un brouillon de réponse. Le LLM ne remplace pas le calcul du solde ni les contrôles d'autorisation. La [qualification locale avec Ollama](n8n-qualification.md) est maintenant implémentée dans n8n ; elle conserve la décision humaine.
 
 ## Délais et notifications
 
@@ -124,4 +124,4 @@ npm run build
 
 `db:test` annule les données de chaque test. `db:verify` crée une base temporaire, y reconstruit le schéma à partir des migrations, exécute les tests et deux scénarios de concurrence, puis supprime uniquement cette base temporaire. Il utilise le conteneur local `supabase_db_NovaCorp` et ne copie que la structure de la base, sans ses données.
 
-Les formulaires et le suivi des demandes restent la prochaine étape sur cette branche.
+Les formulaires et le suivi sont disponibles. Le workflow de qualification active désormais le manager ; l’avancement après ses décisions et les relances restent les prochaines étapes.
