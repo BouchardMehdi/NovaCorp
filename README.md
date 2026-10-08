@@ -9,7 +9,9 @@ Plateforme interne de gestion des demandes RH, réalisée dans le cadre du fil r
 - **MailHog dans Docker** : réception des emails de test.
 - **n8n et LLM via API** : prévus pour les prochaines étapes du projet.
 
-Cette branche implémente la connexion email/mot de passe, les sessions par cookies, la déconnexion, un espace privé et les profils métier. Le tableau de bord est pour l'instant une page d'accueil du compte. Les quatre types de demandes, validations, notifications métier et contrôles IA du cahier des charges restent à construire.
+L’authentification et le schéma complet de la base RH sont en place : quatre types de demandes, règles de validation versionnées, étapes, historique, soldes de congés, pièces jointes privées, contrôles IA, exécutions n8n, notifications et mesures des délais. Les formulaires, le dashboard métier et les workflows n8n restent à développer.
+
+Le [schéma relationnel et les permissions](docs/database-schema.md) décrivent les tables, les opérations et les paramètres métier à définir. Les seuils et délais n’étant pas chiffrés dans le PDF, les règles initiales sont désactivées.
 
 ## Prérequis
 
@@ -29,6 +31,7 @@ npm ci
 npm run mail:start
 npm run supabase:start
 npm run local:env
+npm run db:migrate
 npm run auth:seed
 npm run dev
 ```
@@ -81,7 +84,7 @@ MailHog conserve ses messages en mémoire : ils ne sont pas conservés après un
 - Une session absente ou invalide ne permet pas d'accéder aux pages privées.
 - Un utilisateur connecté est redirigé depuis la page de connexion vers son espace.
 
-La table `public.profiles` contient le nom, le rôle et le manager. À cette étape, un compte connecté peut uniquement lire son propre profil. Aucun utilisateur ne peut modifier directement son rôle, son manager ou son profil. Les permissions des demandes RH seront ajoutées avec leurs tables.
+La table `public.profiles` contient le nom, le rôle et le manager. Un salarié lit son profil ; un manager lit aussi ceux de son équipe ; les RH et le DRH lisent tous les profils. Aucun utilisateur ne peut modifier directement son rôle, son manager ou son profil. Les demandes et leurs fichiers sont protégés par RLS ; les brouillons restent privés. Voir la [matrice des accès](docs/database-schema.md#permissions-rls).
 
 Si Supabase n'est pas configuré, la page de connexion présente un message d'indisponibilité et désactive le formulaire. Si le service ne répond pas pendant une tentative, un message d'erreur est affiché.
 
@@ -90,6 +93,8 @@ Si Supabase n'est pas configuré, la page de connexion présente un message d'in
 Avec Supabase démarré et les comptes fictifs créés :
 
 ```powershell
+npm run db:lint
+npm run db:test
 npm run lint
 npm run typecheck
 npm run build
@@ -97,7 +102,9 @@ npx playwright install chromium
 npm test
 ```
 
-Les tests couvrent les champs invalides, l'accès anonyme, une session forgée, le mauvais mot de passe, la connexion, le maintien de session après actualisation, la déconnexion, l'isolation des profils par RLS et l'affichage mobile. Playwright démarre automatiquement Next.js si aucun serveur ne tourne sur le port 3000.
+Les tests SQL couvrent les permissions, les contraintes, les règles et le parcours de validation complet avec DRH. Leurs données fictives sont annulées à la fin de chaque test.
+
+Les tests navigateur couvrent les champs invalides, l'accès anonyme, une session forgée, le mauvais mot de passe, la connexion, le maintien de session après actualisation, la déconnexion, l'isolation des profils par RLS et l'affichage mobile. Playwright démarre automatiquement Next.js si aucun serveur ne tourne sur le port 3000.
 
 ## Arrêt et reprise
 
@@ -113,6 +120,7 @@ Les données Supabase sont conservées. Pour reprendre :
 ```powershell
 npm run mail:start
 npm run supabase:start
+npm run db:migrate
 npm run dev
 ```
 
@@ -129,7 +137,10 @@ src/lib/auth/                  Validation et vérification de l'utilisateur
 src/lib/supabase/              Clients navigateur et serveur
 src/proxy.ts                   Renouvellement de session et protection des routes
 supabase/config.toml           Configuration des services locaux
-supabase/migrations/           Schéma des profils et politiques RLS
+supabase/migrations/           Schéma RH, politiques RLS et opérations contrôlées
+supabase/tests/database/       Tests SQL transactionnels
+src/types/database.ts          Types publics générés (npm run db:types)
+docs/database-schema.md        Schéma relationnel et contrat pour n8n
 scripts/                       Configuration locale et comptes fictifs
 tests/                         Tests de connexion et de permissions
 compose.yaml                   MailHog et réseau Docker local
