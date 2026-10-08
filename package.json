@@ -15,7 +15,11 @@
     "auth:seed": "node --env-file=.env.local scripts/seed-users.mjs",
     "local:env": "node scripts/local-env.mjs",
     "mail:start": "docker compose up -d mailhog",
-    "mail:stop": "docker compose stop mailhog"
+    "mail:stop": "docker compose stop mailhog",
+    "db:migrate": "supabase migration up --local",
+    "db:test": "supabase test db --network-id novacorp_default",
+    "db:lint": "supabase db lint --local --level warning",
+    "db:types": "node scripts/generate-database-types.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
