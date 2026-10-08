@@ -1,0 +1,1 @@
+-- Les comptes fictifs sont créés via Supabase Auth avec npm run auth:seed.
