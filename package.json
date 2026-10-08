@@ -21,7 +21,13 @@
     "db:lint": "supabase db lint --local --level warning",
     "db:types": "node scripts/generate-database-types.mjs",
     "business:seed": "node --env-file=.env.local scripts/seed-business-rules.mjs",
-    "db:verify": "node scripts/verify-database.mjs"
+    "db:verify": "node scripts/verify-database.mjs",
+    "n8n:env": "node scripts/n8n-env.mjs",
+    "n8n:start": "npm run n8n:env && docker compose --profile automation up -d --wait n8n",
+    "n8n:stop": "docker compose --profile automation stop n8n",
+    "n8n:logs": "docker compose --profile automation logs --tail 100 n8n",
+    "n8n:setup": "node scripts/n8n-setup.mjs",
+    "n8n:verify": "node scripts/n8n-verify.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

@@ -7,9 +7,10 @@ Plateforme interne de gestion des demandes RH, réalisée dans le cadre du fil r
 - **Next.js + React + TypeScript** : interface.
 - **Supabase local dans Docker** : Auth, PostgreSQL, RLS, Storage et Realtime.
 - **MailHog dans Docker** : réception des emails de test.
-- **n8n et LLM via API** : prévus pour les prochaines étapes du projet.
+- **n8n local dans Docker** : connexions Supabase et MailHog, workflow manuel de vérification.
+- **LLM via API dans n8n** : à connecter dans le workflow métier.
 
-L’authentification et le schéma complet de la base RH sont en place : quatre types de demandes, règles de validation versionnées, étapes, historique, soldes de congés, pièces jointes privées, contrôles IA, exécutions n8n, notifications et mesures des délais. Les quatre formulaires et leur suivi sont disponibles : brouillons, soumission, annulation, filtres, vues par rôle et décisions des validateurs. Les workflows n8n restent à développer. Voir le [parcours de l’interface](docs/hr-interface.md).
+L’authentification et le schéma complet de la base RH sont en place : quatre types de demandes, règles de validation versionnées, étapes, historique, soldes de congés, pièces jointes privées, contrôles IA, exécutions n8n, notifications et mesures des délais. Les quatre formulaires et leur suivi sont disponibles : brouillons, soumission, annulation, filtres, vues par rôle et décisions des validateurs. Les workflows métier n8n restent à développer. L’[installation locale n8n](docs/n8n-local.md) et ses connexions sont prêtes. Voir le [parcours de l’interface](docs/hr-interface.md).
 
 Le [schéma relationnel et les permissions](docs/database-schema.md) décrivent les tables, les opérations et les permissions métier. Les [règles métier validées](docs/business-rules.md) sont actives : seuils DRH, délai de 48 h, relance à 24 h, calcul et réservation des congés. Les envois et la planification restent à brancher dans n8n.
 
@@ -17,7 +18,7 @@ Le [schéma relationnel et les permissions](docs/database-schema.md) décrivent 
 
 - Node.js **22.19 ou supérieur compatible avec Next.js** et npm.
 - Docker Desktop démarré, avec les conteneurs Linux.
-- Ports locaux disponibles : **3000**, **1025**, **8025**, **54320 à 54324**.
+- Ports locaux disponibles : **3000**, **1025**, **8025**, **5678**, **54320 à 54324**.
 - Internet au premier démarrage pour télécharger les dépendances et les images.
 
 Supabase est lancé par la CLI **2.120.0**, fixée dans les dépendances. Aucun compte Supabase cloud n’est nécessaire.
@@ -34,14 +35,17 @@ npm run local:env
 npm run db:migrate
 npm run auth:seed
 npm run business:seed
+npm run n8n:start
+npm run n8n:setup
+npm run n8n:verify
 npm run dev
 ```
 
-Ouvrir **http://localhost:3000/connexion**.
+Ouvrir **http://localhost:3000/connexion**. Pour n8n, ouvrir **http://localhost:5678** et créer le compte propriétaire au premier accès (indépendant des comptes salariés).
 
 Le premier démarrage de Supabase télécharge plusieurs images et applique la migration des profils. MailHog crée le réseau Docker `novacorp_default`, partagé avec Supabase. Les ports MailHog sont liés à l'interface locale. La CLI Supabase peut publier ses ports sur toutes les interfaces : cet environnement reste réservé au développement local.
 
-`npm run local:env` écrit l'URL, la clé publique et la clé d'administration locales dans **.env.local**, sans les afficher. Ce fichier est ignoré par Git. La clé d'administration sert uniquement aux scripts locaux d'initialisation et aux tests ; elle n'est jamais utilisée par les clients Next.js.
+`npm run local:env` écrit l'URL, la clé publique et la clé d'administration locales dans **.env.local**, sans les afficher. Ce fichier est ignoré par Git. La clé d'administration sert uniquement aux scripts locaux d'initialisation, aux tests et au backend n8n ; elle n'est jamais utilisée par les clients Next.js.
 
 La clé publique peut être une clé publishable ou la clé anon fournie par la CLI. Les accès aux données restent soumis à la session utilisateur et aux politiques RLS.
 
@@ -68,6 +72,7 @@ L'inscription publique est désactivée. Les comptes sont créés avec l'API d'a
 | API Supabase | http://127.0.0.1:54321 |
 | Supabase Studio | http://127.0.0.1:54323 |
 | MailHog | http://localhost:8025 |
+| n8n | http://localhost:5678 |
 | SMTP MailHog, depuis le réseau Docker partagé | `mailhog:1025` |
 
 MailHog est prêt pour les futures notifications métier envoyées par n8n. La récupération du mot de passe et les emails Supabase Auth ne sont pas configurés à cette étape.
@@ -97,6 +102,7 @@ Avec Supabase démarré et les comptes fictifs créés :
 npm run db:lint
 npm run db:test
 npm run db:verify
+npm run n8n:verify
 npm run lint
 npm run typecheck
 npm run build
@@ -113,6 +119,7 @@ Les tests navigateur couvrent les champs invalides, l'accès anonyme, une sessio
 Arrêter Next.js avec **Ctrl+C**, puis :
 
 ```powershell
+npm run n8n:stop
 npm run supabase:stop
 npm run mail:stop
 ```
@@ -123,6 +130,7 @@ Les données Supabase sont conservées. Pour reprendre :
 npm run mail:start
 npm run supabase:start
 npm run db:migrate
+npm run n8n:start
 npm run dev
 ```
 
@@ -144,9 +152,11 @@ supabase/tests/database/       Tests SQL transactionnels
 src/types/database.ts          Types publics générés (npm run db:types)
 docs/database-schema.md        Schéma relationnel et contrat pour n8n
 docs/business-rules.md         Règles métier validées et initialisation
+docs/n8n-local.md              Installation et connexions n8n
+n8n/workflows/                 Workflows exportés sans secrets
 scripts/                       Configuration locale et comptes fictifs
 tests/                         Tests de connexion, permissions et parcours RH
-compose.yaml                   MailHog et réseau Docker local
+compose.yaml                   n8n, MailHog, volume et réseau Docker local
 ```
 
 ## Références
