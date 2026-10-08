@@ -41,7 +41,12 @@
     "n8n:approvals:install": "npm run n8n:approvals:build && node scripts/install-approval-workflows.mjs",
     "n8n:approvals:start": "node scripts/start-approval-workflows.mjs",
     "n8n:approvals:stop": "node scripts/stop-approval-workflows.mjs",
-    "n8n:approvals:verify": "node --env-file=.env.local scripts/verify-approvals.mjs"
+    "n8n:approvals:verify": "node --env-file=.env.local scripts/verify-approvals.mjs",
+    "n8n:reminders:build": "node scripts/build-reminder-workflow.mjs",
+    "n8n:reminders:install": "npm run n8n:reminders:build && node scripts/install-reminder-workflow.mjs",
+    "n8n:reminders:start": "node scripts/start-reminder-workflow.mjs",
+    "n8n:reminders:stop": "node scripts/stop-reminder-workflow.mjs",
+    "n8n:reminders:verify": "node --env-file=.env.local scripts/verify-reminders.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

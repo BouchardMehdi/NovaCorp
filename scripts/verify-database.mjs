@@ -107,6 +107,18 @@ try {
   assert.equal(emails.filter(Boolean).length,1);
   console.log("Concurrence : une seule réservation SMTP RH.");
 
+  // Horodatages simulés uniquement dans la base temporaire de vérification.
+  for(const hours of [24,49]){
+    sql("begin; set local session_replication_role='replica'; update public.approval_steps set activated_at=now()-interval '"+hours+" hours',due_at=now()+interval '"+(48-hours)+" hours' where request_id='22000000-0000-0000-0000-000000000005' and position=2; commit;");
+    const queued=await Promise.all([1,2].map(async()=>{
+      const {stdout}=await execAsync("docker",[...psql,"-At","-c",
+        "begin; set local role service_role; select queue_due_hr_reminders('22000000-0000-0000-0000-000000000005'); select pg_sleep(0.3); commit;"],{encoding:"utf8",timeout:15000});
+      return Number(stdout.split(/\r?\n/).find(line=>/^\d+$/.test(line)));
+    }));
+    assert.deepEqual(queued.sort(),[0,1]);
+    console.log("Concurrence : une seule "+(hours===24?"relance à 24 h":"alerte RH après 48 h")+".");
+  }
+
 } catch (error) {
   console.error(error.stderr || error.message);
   process.exitCode = 1;

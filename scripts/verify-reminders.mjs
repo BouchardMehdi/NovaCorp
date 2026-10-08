@@ -8,7 +8,7 @@ if(!url||!["localhost","127.0.0.1","[::1]"].includes(new URL(url).hostname))thro
 const admin=createClient(url,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
 const user=createClient(url,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
 const suffix=randomUUID().slice(0,8);
-const workflowIds=["advanceTest"+suffix,"notifyTest"+suffix];
+const workflowIds=["reminderTest"+suffix,"reminderMailTest"+suffix];
 let userId;
 async function execute(workflowName,id,requestId,model){
  const workflow=JSON.parse(await readFile("n8n/workflows/"+workflowName+".json","utf8"));
@@ -60,57 +60,62 @@ const notify=async(id,kind)=>{
  else if(encoding==="base64")mail.Content.Body=Buffer.from(mail.Content.Body,"base64").toString("utf8");
  assert.ok(mail.Content.Body.includes(id));return mail;
 };
+const age=(id,position,hours)=>{
+ assert.match(id,/^[a-f0-9-]{36}$/);assert.match(userId,/^[a-f0-9-]{36}$/);
+ assert.ok(Number.isInteger(hours)&&hours>=0&&hours<=100);
+ // Simulation limitée aux étapes de la fixture ; aucun trigger global désactivé.
+ sql("begin; set local session_replication_role='replica'; update public.approval_steps s set activated_at=now()-interval '"+hours+" hours',due_at=now()+interval '"+(48-hours)+" hours' from public.requests r where r.id=s.request_id and r.requester_id='"+userId+"' and r.id='"+id+"' and s.position="+position+"; commit;");
+};
+const supervise=async id=>assert.equal(await execute("reminders",workflowIds[0],id),"success");
 try{
- const published=inside(container(),"const {DatabaseSync}=require(\"node:sqlite\");const db=new DatabaseSync(\"/home/node/.n8n/database.sqlite\");try{console.log(JSON.stringify(db.prepare(\"SELECT id FROM workflow_entity WHERE id IN (?,?,?,?,?) AND activeVersionId IS NOT NULL\").all(\"novacorpQualification\",\"novacorpManagerEmails\",\"novacorpApprovals\",\"novacorpNotifications\",\"novacorpReminders\")));}finally{db.close();}");
- assert.equal(JSON.parse(published).length,0,"Dépubliez qualification, validations et supervision avant ce test.");
- const email="approvals-"+suffix+"@novacorp.test";
+ assert.equal(JSON.parse(inside(container(),"const {DatabaseSync}=require(\"node:sqlite\");const db=new DatabaseSync(\"/home/node/.n8n/database.sqlite\");try{console.log(JSON.stringify(db.prepare(\"SELECT id FROM workflow_entity WHERE id IN (?,?,?,?,?) AND activeVersionId IS NOT NULL\").all(\"novacorpQualification\",\"novacorpManagerEmails\",\"novacorpApprovals\",\"novacorpNotifications\",\"novacorpReminders\")));}finally{db.close();}")).length,0,"Dépubliez qualification, validations et supervision avant ce test.");
+ const email="reminders-"+suffix+"@novacorp.test";
  const created=await admin.auth.admin.createUser({email,password:"QualificationDemo2026!",email_confirm:true});
  assert.equal(created.error,null);userId=created.data.user.id;
  const manager=(await admin.from("profiles").select("id").eq("role","manager").limit(1).single()).data;
  assert.equal((await admin.from("profiles").update({manager_id:manager.id}).eq("id",userId)).error,null);
- assert.equal((await admin.from("leave_balances").insert({employee_id:userId,year:2026,allocated_days:25})).error,null);
  assert.equal((await user.auth.signInWithPassword({email,password:"QualificationDemo2026!"})).error,null);
- for(const scenario of ["director","leave-approved","leave-rejected"]){
-  const payload={requester_id:userId,title:"Test validations "+scenario+" "+suffix,
-   ...(scenario==="director"?{request_type:"equipment",amount:1501,quantity:1}:
-    {request_type:"leave",start_date:scenario==="leave-approved"?"2026-11-02":"2026-11-09",end_date:scenario==="leave-approved"?"2026-11-03":"2026-11-10"})};
-  const createdRequest=await user.from("requests").insert(payload).select("id").single();assert.equal(createdRequest.error,null);
-  const id=createdRequest.data.id;
-  assert.equal((await user.rpc("submit_hr_request",{p_request_id:id})).error,null);await qualify(id);
-  await decide(id,1,scenario!=="leave-rejected");
-  assert.equal(await execute("approvals",workflowIds[0],id),"success");
-  if(scenario!=="leave-rejected"){
-   assert.equal((await get("approval_steps",id)).find(s=>s.position===2).status,"pending");
-   if(scenario==="director"){
-    const mail=await notify(id,"approval_needed");assert.ok(mail.Content.Body.includes("(RH)"));
-    const before=(await messages()).length;
-    assert.equal(await execute("notifications",workflowIds[1],id),"success");assert.equal((await messages()).length,before);
-   }
-   await decide(id,2,true);assert.equal(await execute("approvals",workflowIds[0],id),"success");
-   if(scenario==="director"){
-    assert.equal((await get("approval_steps",id)).find(s=>s.position===3).status,"pending");
-    const mail=await notify(id,"approval_needed");assert.ok(mail.Content.Body.includes("(DRH)"));
-    await decide(id,3,true);assert.equal(await execute("approvals",workflowIds[0],id),"success");
-   }
-  }
-  const status=(await admin.from("requests").select("status").eq("id",id).single()).data.status;
-  assert.equal(status,scenario==="leave-rejected"?"rejected":"approved");
-  const finalEvents=(await get("request_events",id)).filter(e=>e.new_status===status);
-  for(const n of await get("notifications",id))if(n.status==="queued"&&!finalEvents.some(e=>e.id===n.event_id))
-   assert.equal((await admin.from("notifications").update({status:"sent",sent_at:new Date().toISOString()}).eq("id",n.id)).error,null);
-  const mail=await notify(id,"status_change");
-  assert.ok(JSON.stringify(mail.Content.Headers).includes(email));
-  assert.ok(mail.Content.Body.includes(status==="approved"?"Acceptée":"Refusée"));
-  const count=(await messages()).length;
-  assert.equal(await execute("approvals",workflowIds[0],id),"success");
-  assert.equal(await execute("notifications",workflowIds[1],id),"success");assert.equal((await messages()).length,count);
-  console.log("OK "+scenario+" : circuit n8n, emails, statut final et rejeux.");
- }
- const balance=(await admin.from("leave_balances").select("consumed_days,reserved_days").eq("employee_id",userId).single()).data;
- assert.equal(balance.consumed_days,2);assert.equal(balance.reserved_days,0);
- console.log("OK soldes : acceptation consommée, refus libéré.");
+ const request=await user.from("requests").insert({requester_id:userId,request_type:"equipment",title:"Test relances "+suffix,amount:1501,quantity:1}).select("id").single();
+ assert.equal(request.error,null);const id=request.data.id;
+ assert.equal((await user.rpc("submit_hr_request",{p_request_id:id})).error,null);await qualify(id);
+ await supervise(id);
+ assert.equal((await get("notifications",id)).filter(n=>["reminder","overdue_alert"].includes(n.kind)).length,0);
+ console.log("OK supervision : aucun rappel avant 24 h.");
+ age(id,1,24);await supervise(id);
+ const reminders=(await get("notifications",id)).filter(n=>n.kind==="reminder");assert.equal(reminders.length,1);
+ const managerMail=await notify(id,"reminder");assert.ok(managerMail.Content.Body.includes("24 heures"));
+ const managerUser=await admin.auth.admin.getUserById(manager.id);assert.equal(managerUser.error,null);
+ assert.ok(JSON.stringify(managerMail.Content.Headers.To).includes(managerUser.data.user.email));
+ await supervise(id);
+ assert.equal((await get("notifications",id)).filter(n=>n.kind==="reminder").length,1);
+ const before=(await messages()).length;
+ assert.equal(await execute("notifications",workflowIds[1],id),"success");assert.equal((await messages()).length,before);
+ console.log("OK 24 h : email au manager, supervision rejouée sans doublon.");
+ age(id,1,49);await supervise(id);
+ const step=(await get("approval_steps",id)).find(s=>s.position===1);assert.equal(step.status,"pending");
+ const alert=await notify(id,"overdue_alert");assert.ok(alert.Content.Body.includes("48 heures"));assert.ok(alert.Content.Body.includes("Aucune décision automatique"));
+ const referent=(await admin.from("requests").select("hr_referent_id,status").eq("id",id).single()).data;assert.equal(referent.status,"pending_approval");
+ const hrUser=await admin.auth.admin.getUserById(referent.hr_referent_id);assert.equal(hrUser.error,null);
+ assert.ok(JSON.stringify(alert.Content.Headers.To).includes(hrUser.data.user.email));
+ await supervise(id);assert.equal((await get("notifications",id)).filter(n=>n.kind==="overdue_alert").length,1);
+ console.log("OK 48 h : email au RH référent et aucune décision automatique.");
+ await decide(id,1,true);
+ const advanced=await admin.rpc("advance_hr_approvals",{p_execution_id:"reminders-advance-"+suffix,p_request_id:id});assert.equal(advanced.error,null);assert.equal(advanced.data.action,"activate_hr");
+ await supervise(id);assert.equal((await get("notifications",id)).filter(n=>n.kind==="reminder").length,1);
+ age(id,2,24);await supervise(id);
+ const rhMail=await notify(id,"reminder");assert.ok(rhMail.Content.Body.includes("(RH)"));
+ assert.ok(JSON.stringify(rhMail.Content.Headers.To).includes(hrUser.data.user.email));
+ age(id,2,49);await supervise(id);
+ assert.equal((await user.rpc("cancel_hr_request",{p_request_id:id})).error,null);
+ for(const n of await get("notifications",id))if(n.status==="queued"&&n.kind==="status_change")
+  assert.equal((await admin.from("notifications").update({status:"sent",sent_at:new Date().toISOString()}).eq("id",n.id)).error,null);
+ const afterCancel=(await messages()).length;
+ assert.equal(await execute("notifications",workflowIds[1],id),"success");assert.equal((await messages()).length,afterCancel);
+ await supervise(id);
+ assert.equal((await admin.from("requests").select("status").eq("id",id).single()).data.status,"cancelled");
+ console.log("OK étape RH : délai indépendant, relance RH, alerte annulée non envoyée.");
 }catch(error){
- console.error("Vérification validations échouée :",error.message);
+ console.error("Vérification relances échouée :",error.message);
  process.exitCode=1;
 }finally{
  if(userId){

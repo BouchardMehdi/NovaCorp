@@ -519,6 +519,9 @@ isOneToOne: false
         isOneToOne: false
         isSetofReturn: true
       } },
+"queue_due_hr_reminders":
+{ Args: { "p_request_id"?: string }; Returns: number
+                           },
 "queue_hr_approval_reminders":
 { Args: { "p_now"?: string }; Returns: number
                            },
