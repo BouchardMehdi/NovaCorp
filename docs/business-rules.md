@@ -95,7 +95,7 @@ Le délai commence quand n8n active une étape en `pending`. La base produit `ac
 
 Le backend appellera périodiquement `queue_hr_approval_reminders()`. Cette opération crée les notifications en file et évite les doublons. Le paramètre facultatif `p_now` permet des tests aux frontières ; en exploitation, utiliser l'heure réelle par défaut.
 
-Si le premier passage du superviseur survient après l'échéance, il crée directement l'alerte RH, sans ajouter une relance déjà périmée. Une demande clôturée n'engendre plus de relances. Avant l'envoi, n8n devra vérifier que la demande et l'étape sont encore actives, y compris pour une notification déjà mise en file.
+Si le premier passage du superviseur survient après l'échéance, il crée directement l'alerte RH, sans ajouter une relance déjà périmée. Une demande clôturée n'engendre plus de relances. Lors de la réservation d'un email, n8n vérifie en base que la demande et l'étape sont encore actives, y compris pour une notification déjà mise en file.
 
 Ces opérations ne démarrent pas de planificateur et n'envoient pas d'email à elles seules. L'envoi MailHog et la planification périodique seront branchés dans n8n.
 
@@ -124,4 +124,8 @@ npm run build
 
 `db:test` annule les données de chaque test. `db:verify` crée une base temporaire, y reconstruit le schéma à partir des migrations, exécute les tests et deux scénarios de concurrence, puis supprime uniquement cette base temporaire. Il utilise le conteneur local `supabase_db_NovaCorp` et ne copie que la structure de la base, sans ses données.
 
-Les formulaires et le suivi sont disponibles. Le workflow de qualification active désormais le manager ; l’avancement après ses décisions et les relances restent les prochaines étapes.
+Les formulaires et le suivi sont disponibles. Le workflow de qualification active le manager ; le [circuit n8n](n8n-approvals.md) active ensuite les RH/DRH et finalise après décisions humaines. Les emails des validateurs et les statuts salarié sont envoyés dans MailHog. Les [relances et alertes](n8n-reminders.md) sont planifiées dans n8n.
+
+Les RPC backend `advance_hr_approvals(text,uuid)`, `claim_hr_notification_email(uuid)` et `finish_hr_notification_email(uuid,uuid,boolean,text)` assurent respectivement l’avancement atomique, la réservation SMTP et son acquittement. Les décisions humaines et les seuils restent vérifiés par les gardes SQL existants.
+
+La supervision des délais est activée par `npm run n8n:reminders:start`. La dépublier également avec `npm run n8n:reminders:stop` avant les tests d’intégration ou navigateur, puis la réactiver après les vérifications.

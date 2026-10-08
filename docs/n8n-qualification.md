@@ -21,13 +21,13 @@ npm run n8n:qualification:install
 npm run n8n:qualification:start
 ```
 
-Le premier téléchargement du modèle représente environ 1,4 Go, en plus de l’image Ollama. La commande d’activation vérifie la présence du modèle avant de publier les deux workflows et de redémarrer n8n pour charger les planifications.
+Le premier téléchargement du modèle représente environ 1,4 Go, en plus de l’image Ollama. La commande d’activation vérifie la présence du modèle avant de publier la qualification et de redémarrer n8n pour charger sa planification. Les emails sont activés avec le circuit de validation.
 
-Les workflows restent non publiés après le simple import. La publication active une exécution par minute de chaque workflow. Chaque passage traite au plus une demande ou un message ; plusieurs passages peuvent tourner sans réserver deux fois la même demande.
+Les workflows restent non publiés après le simple import. La qualification est planifiée chaque minute ; le workflow de notifications général est activé séparément avec `n8n:approvals:start`. Chaque passage traite au plus une demande ou un message ; plusieurs passages peuvent tourner sans réserver deux fois la même demande.
 
 Ouvrir n8n sur http://localhost:5678. Les workflows sont :
 - **NovaCorp - Qualification des demandes** (`novacorpQualification`).
-- **NovaCorp - Notifications manager** (`novacorpManagerEmails`).
+- L’ancien **NovaCorp - Notifications manager** (`novacorpManagerEmails`) est remplacé par **NovaCorp - Notifications RH et salarié** lors de l’installation du circuit de validation.
 
 Ils réutilisent les connexions Supabase et MailHog existantes. Ollama est appelé directement sur le réseau Docker, sans identifiant supplémentaire. Le port hôte 11434 est lié uniquement à l’interface locale.
 
@@ -90,4 +90,8 @@ npm run llm:stop
 
 Pour reprendre, démarrer Ollama, puis republier les workflows avec `n8n:qualification:start`. Les poids du modèle sont conservés ; pas besoin de les télécharger à nouveau.
 
-La suite sera l’avancement du circuit après une décision du manager, puis du RH et éventuellement du DRH, les notifications de statut au salarié et les relances à 24 h/alertes à 48 h. Cette branche ne ferme pas automatiquement une demande après la décision du manager.
+Le [circuit de validation](n8n-approvals.md) assure désormais l’avancement manager → RH → DRH et la finalisation après leurs décisions. Les [relances à 24 h et alertes à 48 h](n8n-reminders.md) sont planifiées dans n8n.
+
+Depuis l’installation du circuit de validation, `n8n:qualification:start` publie uniquement la qualification. Les emails de tous les validateurs et du salarié sont activés par `npm run n8n:approvals:start`. Dépublier aussi ces workflows avec `npm run n8n:approvals:stop` avant les tests d’intégration et navigateur.
+
+La supervision des délais est activée par `npm run n8n:reminders:start`. La dépublier également avec `npm run n8n:reminders:stop` avant les tests d’intégration ou navigateur, puis la réactiver après les vérifications.

@@ -7,12 +7,12 @@ Plateforme interne de gestion des demandes RH, réalisée dans le cadre du fil r
 - **Next.js + React + TypeScript** : interface.
 - **Supabase local dans Docker** : Auth, PostgreSQL, RLS, Storage et Realtime.
 - **MailHog dans Docker** : réception des emails de test.
-- **n8n local dans Docker** : connexions Supabase et MailHog, workflow manuel de vérification.
+- **n8n local dans Docker** : qualification, circuit de validation et emails via Supabase et MailHog.
 - **Ollama + Qwen3 1.7B dans Docker** : LLM local gratuit appelé par n8n.
 
-L’authentification et le schéma complet de la base RH sont en place : quatre types de demandes, règles de validation versionnées, étapes, historique, soldes de congés, pièces jointes privées, contrôles IA, exécutions n8n, notifications et mesures des délais. Les quatre formulaires et leur suivi sont disponibles : brouillons, soumission, annulation, filtres, vues par rôle et décisions des validateurs. La [qualification n8n avec Ollama](docs/n8n-qualification.md) prépare et active le manager, puis le notifie dans MailHog. L’avancement RH/DRH, les notifications salarié et les relances restent à développer. L’[installation locale n8n](docs/n8n-local.md) et ses connexions sont prêtes. Voir le [parcours de l’interface](docs/hr-interface.md).
+L’authentification et le schéma complet de la base RH sont en place : quatre types de demandes, règles de validation versionnées, étapes, historique, soldes de congés, pièces jointes privées, contrôles IA, exécutions n8n, notifications et mesures des délais. Les quatre formulaires et leur suivi sont disponibles : brouillons, soumission, annulation, filtres, vues par rôle et décisions des validateurs. La [qualification n8n avec Ollama](docs/n8n-qualification.md) prépare et active le manager, puis le notifie dans MailHog. Le [circuit de validation n8n](docs/n8n-approvals.md) active ensuite les RH/DRH, finalise après décision humaine et envoie les changements de statut au salarié. Les [relances à 24 h et alertes RH à 48 h](docs/n8n-reminders.md) sont planifiées dans n8n. L’[installation locale n8n](docs/n8n-local.md) et ses connexions sont prêtes. Voir le [parcours de l’interface](docs/hr-interface.md).
 
-Le [schéma relationnel et les permissions](docs/database-schema.md) décrivent les tables, les opérations et les permissions métier. Les [règles métier validées](docs/business-rules.md) sont actives : seuils DRH, délai de 48 h, relance à 24 h, calcul et réservation des congés. Les envois et la planification restent à brancher dans n8n.
+Le [schéma relationnel et les permissions](docs/database-schema.md) décrivent les tables, les opérations et les permissions métier. Les [règles métier validées](docs/business-rules.md) sont actives : seuils DRH, délai de 48 h, relance à 24 h, calcul et réservation des congés. Les validations et les emails sont orchestrés dans n8n ; les relances et alertes sont planifiées chaque minute.
 
 ## Prérequis
 
@@ -42,6 +42,10 @@ npm run llm:start
 npm run llm:pull
 npm run n8n:qualification:install
 npm run n8n:qualification:start
+npm run n8n:approvals:install
+npm run n8n:approvals:start
+npm run n8n:reminders:install
+npm run n8n:reminders:start
 npm run dev
 ```
 
@@ -82,7 +86,7 @@ L'inscription publique est désactivée. Les comptes sont créés avec l'API d'a
 
 MailHog est prêt pour les futures notifications métier envoyées par n8n. La récupération du mot de passe et les emails Supabase Auth ne sont pas configurés à cette étape.
 
-MailHog conserve ses messages en mémoire : ils ne sont pas conservés après un redémarrage du conteneur. Les emails de démonstration restent locaux. Les notifications métier seront implémentées dans n8n à une étape suivante.
+MailHog conserve ses messages en mémoire : ils ne sont pas conservés après un redémarrage du conteneur. Les emails de démonstration restent locaux. Les emails de validation et de statut sont envoyés par n8n.
 
 ## Authentification et accès
 
@@ -101,13 +105,15 @@ Si Supabase n'est pas configuré, la page de connexion présente un message d'in
 
 ## Vérifications
 
-Avec Supabase démarré et les comptes fictifs créés. Si les workflows métier sont publiés, les arrêter avec `npm run n8n:qualification:stop` avant les tests navigateur, puis les reprendre avec `npm run n8n:qualification:start` :
+Avec Supabase démarré et les comptes fictifs créés. Si les workflows métier sont publiés, les arrêter avec `npm run n8n:qualification:stop` ainsi que `npm run n8n:approvals:stop` et `npm run n8n:reminders:stop` avant les tests navigateur, puis les reprendre avec `npm run n8n:qualification:start` puis `npm run n8n:approvals:start` et `npm run n8n:reminders:start` :
 
 ```powershell
 npm run db:lint
 npm run db:test
 npm run db:verify
 npm run n8n:verify
+npm run n8n:approvals:verify
+npm run n8n:reminders:verify
 npm run lint
 npm run typecheck
 npm run build
@@ -160,7 +166,9 @@ src/types/database.ts          Types publics générés (npm run db:types)
 docs/database-schema.md        Schéma relationnel et contrat pour n8n
 docs/business-rules.md         Règles métier validées et initialisation
 docs/n8n-local.md              Installation et connexions n8n
-docs/n8n-qualification.md      Qualification locale et notifications manager
+docs/n8n-qualification.md      Qualification locale avec Ollama
+docs/n8n-approvals.md          Circuit de validation et emails
+docs/n8n-reminders.md          Relances 24 h et alertes RH 48 h
 n8n/workflows/                 Workflows exportés sans secrets
 scripts/                       Configuration locale et comptes fictifs
 tests/                         Tests de connexion, permissions et parcours RH

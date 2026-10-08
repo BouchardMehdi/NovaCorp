@@ -47,10 +47,14 @@ L’arrêt conserve le volume et les workflows. Les emails MailHog restent en m�
 
 ## Prochaine étape
 
-Le setup connecte les services. La [qualification avec Ollama](n8n-qualification.md) collecte désormais les demandes, exécute les contrôles, produit la synthèse et active le manager. L’avancement après décision, les notifications salarié et les relances restent à construire.
+Le setup connecte les services. La [qualification avec Ollama](n8n-qualification.md) collecte désormais les demandes, exécute les contrôles, produit la synthèse et active le manager. Le [circuit de validation](n8n-approvals.md) assure maintenant l’avancement et les notifications salarié. Les [relances et alertes](n8n-reminders.md) sont désormais planifiées dans n8n.
 
 Pour les RPC Supabase, utiliser un nœud HTTP Request avec l’authentification prédéfinie **Supabase API**, la connexion importée et une URL `http://supabase_kong_NovaCorp:8000/rest/v1/rpc/<fonction>`. Les paramètres sont transmis en JSON par POST. Le contrat des fonctions figure dans [les règles métier](business-rules.md) et [le schéma](database-schema.md).
 
 Le LLM utilise maintenant Ollama et Qwen3 1.7B en local, sans clé API payante. Voir la [configuration du modèle](n8n-qualification.md).
 
 Références officielles : [Docker Compose n8n](https://docs.n8n.io/deploy/host-n8n/install-options/install-using-docker-compose.md), [commandes serveur](https://docs.n8n.io/hosting/cli-commands/), [connexion Supabase](https://docs.n8n.io/integrations/builtin/credentials/supabase/).
+
+Depuis l’installation du circuit de validation, `n8n:qualification:start` publie uniquement la qualification. Les emails de tous les validateurs et du salarié sont activés par `npm run n8n:approvals:start`. Dépublier aussi ces workflows avec `npm run n8n:approvals:stop` avant les tests d’intégration et navigateur.
+
+La supervision des délais est activée par `npm run n8n:reminders:start`. La dépublier également avec `npm run n8n:reminders:stop` avant les tests d’intégration ou navigateur, puis la réactiver après les vérifications.

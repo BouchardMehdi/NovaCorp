@@ -1,0 +1,10 @@
+import {readFile,writeFile} from "node:fs/promises";
+const workflow=JSON.parse(await readFile("n8n/workflows/approvals.json","utf8"));
+workflow.id="novacorpReminders";workflow.name="NovaCorp - Relances 24 h et alertes RH 48 h";
+const rpc=workflow.nodes.find(node=>node.name==="Avancer le circuit");
+rpc.id="Verifier les echeances";rpc.name=rpc.id;
+rpc.parameters.url="http://supabase_kong_NovaCorp:8000/rest/v1/rpc/queue_due_hr_reminders";
+rpc.parameters.jsonBody="={{ {p_request_id:$json.request_id || null} }}";
+workflow.connections.Configuration.main[0][0].node=rpc.id;
+await writeFile("n8n/workflows/reminders.json",JSON.stringify(workflow,null,2)+"\n");
+console.log("Workflow de supervision généré sans secrets.");

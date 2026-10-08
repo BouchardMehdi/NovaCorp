@@ -20,12 +20,14 @@ Le titre est obligatoire même pour un brouillon. Les autres données propres au
 
 ## Suite du projet
 
-La soumission place la demande dans l’état « Soumise ». Le [workflow de qualification n8n](n8n-qualification.md) lance maintenant l’analyse IA, prépare le circuit et active le manager. L’avancement après les décisions reste à développer. Les boutons de validation apparaissent lorsque ces étapes existent et sont actives.
+La soumission place la demande dans l’état « Soumise ». Le [workflow de qualification n8n](n8n-qualification.md) lance maintenant l’analyse IA, prépare le circuit et active le manager. Le [circuit de validation n8n](n8n-approvals.md) active ensuite les RH, éventuellement la DRH et finalise après les décisions humaines. Les boutons de validation apparaissent lorsque ces étapes existent et sont actives.
 
-L’envoi au manager via MailHog est connecté dans n8n ; les notifications salarié et les relances restent à connecter. Cette étape ajoute les formulaires et le suivi ; le dépôt et l’analyse des pièces jointes ne sont pas encore exposés dans l’interface.
+Les emails manager, RH, DRH et de statut salarié sont connectés à MailHog dans n8n ; les [relances et alertes](n8n-reminders.md) sont également connectées. Cette étape ajoute les formulaires et le suivi ; le dépôt et l’analyse des pièces jointes ne sont pas encore exposés dans l’interface.
 
 ## Vérification
 
 `npm test` couvre l’authentification et les parcours des quatre formulaires, les erreurs de solde et leurs reprises sans doublon, les filtres, la confidentialité d’un brouillon, l’affichage mobile et les décisions du manager avec actualisation du suivi salarié.
 
 Les tests RH créent un utilisateur fictif distinct, doté d’un solde propre. Ils simulent la préparation n8n uniquement pour tester les boutons du validateur. Leur nettoyage supprime uniquement les données de cet utilisateur aléatoire, via le conteneur PostgreSQL local `supabase_db_NovaCorp`, sans réinitialiser la base.
+
+La supervision des délais est activée par `npm run n8n:reminders:start`. La dépublier également avec `npm run n8n:reminders:stop` avant les tests d’intégration ou navigateur, puis la réactiver après les vérifications.

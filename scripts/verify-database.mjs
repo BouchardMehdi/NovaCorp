@@ -89,6 +89,36 @@ try {
   assert.equal(qualifications.filter(Boolean).length,1);
   console.log("Concurrence : une seule exécution n8n réserve la qualification.");
 
+  sql("set role service_role; select complete_hr_qualification(id,lease_token,'{\"qualification\":\"eligible\",\"summary\":\"Fixture concurrence\",\"response_draft\":\"Attente\"}') from workflow_runs where request_id='22000000-0000-0000-0000-000000000005' and status='running'; reset role; set role authenticated; set request.jwt.claims='{\"sub\":\"12000000-0000-0000-0000-000000000002\",\"role\":\"authenticated\"}'; select decide_hr_approval(id,true) from approval_steps where request_id='22000000-0000-0000-0000-000000000005' and position=1;");
+  const advances=await Promise.all(["advance-a","advance-b"].map(async execution=>{
+    const {stdout}=await execAsync("docker",[...psql,"-At","-c",
+      "begin; set local role service_role; select advance_hr_approvals('"+execution+"','22000000-0000-0000-0000-000000000005'); select pg_sleep(0.3); commit;"],{encoding:"utf8",timeout:15000});
+    return JSON.parse(stdout.split(/\r?\n/).find(line=>line.startsWith("{"))).processed;
+  }));
+  assert.equal(advances.filter(Boolean).length,1);
+  assert.equal(docker([...psql,"-At","-c","select count(*) from notifications where request_id='22000000-0000-0000-0000-000000000005' and kind='approval_needed';"]).trim(),"2");
+  console.log("Concurrence : une seule activation RH et une seule notification.");
+  sql("update notifications set status='sent',sent_at=now() where request_id='22000000-0000-0000-0000-000000000005' and kind='status_change';");
+  const emails=await Promise.all([1,2].map(async()=>{
+    const {stdout}=await execAsync("docker",[...psql,"-At","-c",
+      "begin; set local role service_role; select claim_hr_notification_email('22000000-0000-0000-0000-000000000005'); select pg_sleep(0.3); commit;"],{encoding:"utf8",timeout:15000});
+    return JSON.parse(stdout.split(/\r?\n/).find(line=>line.startsWith("{"))).claimed;
+  }));
+  assert.equal(emails.filter(Boolean).length,1);
+  console.log("Concurrence : une seule réservation SMTP RH.");
+
+  // Horodatages simulés uniquement dans la base temporaire de vérification.
+  for(const hours of [24,49]){
+    sql("begin; set local session_replication_role='replica'; update public.approval_steps set activated_at=now()-interval '"+hours+" hours',due_at=now()+interval '"+(48-hours)+" hours' where request_id='22000000-0000-0000-0000-000000000005' and position=2; commit;");
+    const queued=await Promise.all([1,2].map(async()=>{
+      const {stdout}=await execAsync("docker",[...psql,"-At","-c",
+        "begin; set local role service_role; select queue_due_hr_reminders('22000000-0000-0000-0000-000000000005'); select pg_sleep(0.3); commit;"],{encoding:"utf8",timeout:15000});
+      return Number(stdout.split(/\r?\n/).find(line=>/^\d+$/.test(line)));
+    }));
+    assert.deepEqual(queued.sort(),[0,1]);
+    console.log("Concurrence : une seule "+(hours===24?"relance à 24 h":"alerte RH après 48 h")+".");
+  }
+
 } catch (error) {
   console.error(error.stderr || error.message);
   process.exitCode = 1;
