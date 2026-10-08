@@ -106,3 +106,27 @@ select:focus-visible,textarea:focus-visible{outline:3px solid #1c9b98}
 .request-fields{border:0;margin:0;padding:0;min-width:0;display:grid;gap:22px}
 
 .dashboard-main h1{overflow-wrap:anywhere}
+
+.dashboard-nav{display:flex;gap:22px;flex-wrap:wrap;font-size:13px;color:var(--teal)}
+.dashboard-nav a:hover{text-decoration:underline}
+.supervision-main{width:min(1120px,88%)}
+.supervision-filter{display:flex;gap:14px;align-items:end;flex-wrap:wrap;margin:24px 0}
+.supervision-filter .field{flex:1;min-width:180px;max-width:360px}
+.metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:24px 0}
+.metric-card{padding:24px;border:1px solid var(--line);border-radius:12px;background:white}
+.metric-card p{font-size:13px;color:var(--muted);margin:0 0 12px}
+.metric-card strong{font-size:34px;font-weight:500;color:var(--teal)}
+.supervision-columns{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.supervision-columns .panel{margin:0}
+.distribution{display:grid;gap:18px}
+.distribution>div{display:grid;grid-template-columns:110px 1fr;align-items:center;gap:14px;font-size:13px}
+.distribution dd{margin:0;display:flex;gap:12px;align-items:center}
+.distribution-track{flex:1;height:8px;background:#edf2f2;border-radius:8px;overflow:hidden}
+.distribution-track>span{display:block;height:100%;background:var(--teal)}
+.supervision-list{list-style:none;padding:0;margin:0;display:grid;gap:14px}
+.supervision-list li{padding:16px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}
+.supervision-list a{display:grid;gap:6px;color:var(--teal)}
+.supervision-list a:hover strong{text-decoration:underline}
+.supervision-list p{font-size:14px}
+@media(max-width:850px){.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.supervision-columns{grid-template-columns:1fr}.metric-card{padding:18px}.metric-card strong{font-size:28px}.supervision-filter .field{max-width:none}.supervision-filter .button{flex:1}.dashboard-nav{order:3;width:100%}.distribution>div{grid-template-columns:95px 1fr}}
