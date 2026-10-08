@@ -414,7 +414,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "calculate_leave_days":
+            "advance_hr_approvals":
+{ Args: { "p_execution_id": string,"p_request_id"?: string }; Returns: Json
+                           },
+"calculate_leave_days":
 { Args: { "p_end": string,"p_end_half"?: boolean,"p_start": string,"p_start_half"?: boolean }; Returns: number
                            },
 "cancel_hr_request":
@@ -453,6 +456,9 @@ isOneToOne: false
 "claim_hr_manager_email":
 { Args: { "p_request_id"?: string }; Returns: Json
                            },
+"claim_hr_notification_email":
+{ Args: { "p_request_id"?: string }; Returns: Json
+                           },
 "claim_hr_qualification":
 { Args: { "p_execution_id": string,"p_model": string,"p_provider": string,"p_request_id"?: string }; Returns: Json
                            },
@@ -484,6 +490,9 @@ isOneToOne: false
 { Args: { "p_error_code": string,"p_lease_token": string,"p_run_id": string }; Returns: Json
                            },
 "finish_hr_manager_email":
+{ Args: { "p_lease_token": string,"p_message_id"?: string,"p_notification_id": string,"p_sent": boolean }; Returns: Json
+                           },
+"finish_hr_notification_email":
 { Args: { "p_lease_token": string,"p_message_id"?: string,"p_notification_id": string,"p_sent": boolean }; Returns: Json
                            },
 "get_hr_request_checks":

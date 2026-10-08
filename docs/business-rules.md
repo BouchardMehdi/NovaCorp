@@ -124,4 +124,6 @@ npm run build
 
 `db:test` annule les données de chaque test. `db:verify` crée une base temporaire, y reconstruit le schéma à partir des migrations, exécute les tests et deux scénarios de concurrence, puis supprime uniquement cette base temporaire. Il utilise le conteneur local `supabase_db_NovaCorp` et ne copie que la structure de la base, sans ses données.
 
-Les formulaires et le suivi sont disponibles. Le workflow de qualification active désormais le manager ; l’avancement après ses décisions et les relances restent les prochaines étapes.
+Les formulaires et le suivi sont disponibles. Le workflow de qualification active le manager ; le [circuit n8n](n8n-approvals.md) active ensuite les RH/DRH et finalise après décisions humaines. Les emails des validateurs et les statuts salarié sont envoyés dans MailHog. Les relances restent la prochaine étape.
+
+Les RPC backend `advance_hr_approvals(text,uuid)`, `claim_hr_notification_email(uuid)` et `finish_hr_notification_email(uuid,uuid,boolean,text)` assurent respectivement l’avancement atomique, la réservation SMTP et son acquittement. Les décisions humaines et les seuils restent vérifiés par les gardes SQL existants.

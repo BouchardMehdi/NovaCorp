@@ -20,9 +20,9 @@ Le titre est obligatoire même pour un brouillon. Les autres données propres au
 
 ## Suite du projet
 
-La soumission place la demande dans l’état « Soumise ». Le [workflow de qualification n8n](n8n-qualification.md) lance maintenant l’analyse IA, prépare le circuit et active le manager. L’avancement après les décisions reste à développer. Les boutons de validation apparaissent lorsque ces étapes existent et sont actives.
+La soumission place la demande dans l’état « Soumise ». Le [workflow de qualification n8n](n8n-qualification.md) lance maintenant l’analyse IA, prépare le circuit et active le manager. Le [circuit de validation n8n](n8n-approvals.md) active ensuite les RH, éventuellement la DRH et finalise après les décisions humaines. Les boutons de validation apparaissent lorsque ces étapes existent et sont actives.
 
-L’envoi au manager via MailHog est connecté dans n8n ; les notifications salarié et les relances restent à connecter. Cette étape ajoute les formulaires et le suivi ; le dépôt et l’analyse des pièces jointes ne sont pas encore exposés dans l’interface.
+Les emails manager, RH, DRH et de statut salarié sont connectés à MailHog dans n8n ; les relances restent à connecter. Cette étape ajoute les formulaires et le suivi ; le dépôt et l’analyse des pièces jointes ne sont pas encore exposés dans l’interface.
 
 ## Vérification
 

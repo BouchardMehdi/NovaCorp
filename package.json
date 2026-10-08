@@ -36,7 +36,12 @@
     "n8n:qualification:start": "node scripts/start-qualification-workflows.mjs",
     "n8n:qualification:stop": "node scripts/stop-qualification-workflows.mjs",
     "n8n:qualification:test": "node --test tests/qualification.unit.mjs",
-    "n8n:qualification:verify": "node --env-file=.env.local scripts/verify-qualification.mjs"
+    "n8n:qualification:verify": "node --env-file=.env.local scripts/verify-qualification.mjs",
+    "n8n:approvals:build": "node scripts/build-approval-workflows.mjs",
+    "n8n:approvals:install": "npm run n8n:approvals:build && node scripts/install-approval-workflows.mjs",
+    "n8n:approvals:start": "node scripts/start-approval-workflows.mjs",
+    "n8n:approvals:stop": "node scripts/stop-approval-workflows.mjs",
+    "n8n:approvals:verify": "node --env-file=.env.local scripts/verify-approvals.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

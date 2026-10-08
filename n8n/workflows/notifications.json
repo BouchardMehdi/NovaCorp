@@ -1,0 +1,314 @@
+{
+  "id": "novacorpNotifications",
+  "name": "NovaCorp - Notifications RH et salarié",
+  "active": false,
+  "nodes": [
+    {
+      "id": "Manuel",
+      "name": "Manuel",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "parameters": {},
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "Toutes les minutes",
+      "name": "Toutes les minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "id": "Configuration",
+      "name": "Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "request_id",
+              "name": "request_id",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "id": "Reserver le message",
+      "name": "Reserver le message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "http://supabase_kong_NovaCorp:8000/rest/v1/rpc/claim_hr_notification_email",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {p_request_id:$json.request_id || null} }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "position": [
+        440,
+        0
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "novacorpSupabaseLocal",
+          "name": "NovaCorp - Supabase local"
+        }
+      }
+    },
+    {
+      "id": "Message reserve",
+      "name": "Message reserve",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "claimed",
+              "leftValue": "={{ $json.claimed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "id": "Envoyer dans MailHog",
+      "name": "Envoyer dans MailHog",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "parameters": {
+        "fromEmail": "no-reply@novacorp.test",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "position": [
+        880,
+        0
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "novacorpMailhogLocal",
+          "name": "NovaCorp - MailHog local"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "Confirmer l envoi",
+      "name": "Confirmer l envoi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "http://supabase_kong_NovaCorp:8000/rest/v1/rpc/finish_hr_notification_email",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {p_notification_id:$('Reserver le message').first().json.notification_id,p_lease_token:$('Reserver le message').first().json.lease_token,p_sent:true,p_message_id:$json.messageId || null} }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "position": [
+        1100,
+        0
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "novacorpSupabaseLocal",
+          "name": "NovaCorp - Supabase local"
+        }
+      }
+    },
+    {
+      "id": "Tracer l echec SMTP",
+      "name": "Tracer l echec SMTP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "http://supabase_kong_NovaCorp:8000/rest/v1/rpc/finish_hr_notification_email",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {p_notification_id:$('Reserver le message').first().json.notification_id,p_lease_token:$('Reserver le message').first().json.lease_token,p_sent:false} }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "position": [
+        1100,
+        240
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "novacorpSupabaseLocal",
+          "name": "NovaCorp - Supabase local"
+        }
+      }
+    },
+    {
+      "id": "Envoi interrompu",
+      "name": "Envoi interrompu",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "parameters": {
+        "errorMessage": "Email non envoyé : tentative SMTP tracée, réessai limité."
+      },
+      "position": [
+        1320,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "Manuel": {
+      "main": [
+        [
+          {
+            "node": "Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Toutes les minutes": {
+      "main": [
+        [
+          {
+            "node": "Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuration": {
+      "main": [
+        [
+          {
+            "node": "Reserver le message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reserver le message": {
+      "main": [
+        [
+          {
+            "node": "Message reserve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message reserve": {
+      "main": [
+        [
+          {
+            "node": "Envoyer dans MailHog",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Envoyer dans MailHog": {
+      "main": [
+        [
+          {
+            "node": "Confirmer l envoi",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tracer l echec SMTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tracer l echec SMTP": {
+      "main": [
+        [
+          {
+            "node": "Envoi interrompu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Paris",
+    "executionTimeout": 240,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none"
+  },
+  "pinData": {}
+}
