@@ -63,3 +63,46 @@ button{cursor:pointer}
 .error-page p{color:var(--muted)}
 @media(max-width:850px){.brand-panel{padding:30px}.brand-story{padding:64px 0}.brand-story h1{font-size:42px}.login-panel{padding:30px}}
 @media(max-width:640px){.login-shell{display:flex;flex-direction:column}.brand-panel{padding:24px}.brand-story{padding:36px 0 12px}.brand-story h1{font-size:36px}.brand-description,.feature-line,.brand-footer{display:none}.brand-tag{margin-left:0;padding-left:12px;font-size:9px}.login-panel{padding:24px 28px 70px;flex:1}.login-card{padding:28px 0}.login-card h2{font-size:32px}.login-footer{bottom:20px}.dashboard-header{padding:20px;flex-wrap:wrap}.dashboard-header .brand-tag{display:none}.dashboard-main{margin-top:40px}.dashboard-main h1{font-size:34px}.account-card{padding:20px;gap:16px}.next-card{padding:24px}}
+
+select,textarea{font:inherit;color:var(--ink);outline-offset:5px}
+select:focus-visible,textarea:focus-visible{outline:3px solid #1c9b98}
+.field select,.field textarea{width:100%;border:1px solid #cad9d7;border-radius:7px;background:white;padding:14px;min-width:0}
+.field textarea{resize:vertical}
+.panel{padding:28px;background:white;border:1px solid var(--line);border-radius:14px;margin:22px 0}
+.panel h2{font-size:21px;font-weight:500;margin-top:0}
+.request-form{display:grid;gap:22px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.check{display:flex;align-items:center;gap:10px;font-size:14px}
+.check input{width:18px;height:18px;accent-color:var(--teal)}
+.hint{color:var(--muted);font-size:13px;line-height:1.6;margin:8px 0}
+.actions,.section-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.actions{margin-top:20px}
+.section-head{justify-content:space-between;margin:22px 0}
+.section-head h2,.section-head h3,.section-head .eyebrow{margin:0}
+.back{display:inline-block;margin-bottom:26px;color:var(--teal);font-size:14px}
+.filters{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:14px;align-items:end;margin:24px 0}
+.request-list{display:grid;gap:12px}
+.request-card{display:flex;justify-content:space-between;gap:20px;align-items:center;padding:20px 24px;border:1px solid var(--line);border-radius:12px;background:white}
+.request-card:hover{border-color:var(--teal)}
+.request-card h3{margin:8px 0;font-size:18px;overflow-wrap:anywhere}
+.status{font-size:12px;padding:7px 12px;border-radius:30px;background:#edf2f2;white-space:nowrap;display:inline-block}
+.status-approved{background:#e3f2ec;color:#256a5c}
+.status-rejected,.danger{background:#fff0ed;color:#963c2f}
+.danger{border:1px solid #e6b8ae}
+.status-pending_approval,.status-submitted,.status-under_review{background:#fff7e5;color:#745829}
+.details{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.details dt{font-size:12px;color:var(--muted);margin-bottom:8px}
+.details dd{margin:0;font-size:15px;overflow-wrap:anywhere}
+.description{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.7}
+.step{border-top:1px solid var(--line);padding:8px 0 20px}
+.timeline{padding-left:22px}
+.timeline li{padding:8px 0 12px 12px}
+.timeline time{font-size:12px;color:var(--muted)}
+.timeline p{font-size:14px;margin:8px 0}
+.account-card .balance{margin-left:auto;color:var(--teal);line-height:1.7}
+.balance small{color:var(--muted);font-size:11px}
+@media(max-width:640px){.filters,.form-grid,.details{grid-template-columns:1fr}.panel{padding:20px}.request-card{align-items:flex-start;flex-direction:column;padding:20px}.account-card{flex-wrap:wrap}.account-card .balance{margin:0}.actions .button{width:100%}.section-head .button{width:100%}}
+
+.request-fields{border:0;margin:0;padding:0;min-width:0;display:grid;gap:22px}
+
+.dashboard-main h1{overflow-wrap:anywhere}

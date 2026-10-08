@@ -2,7 +2,7 @@
 
 Cette base couvre le socle de la plateforme RH décrit dans le **Fil Rouge - Automatisation - Plateforme RH.pdf**, pages 1 à 3 : quatre types de demandes, routage manager → RH → DRH selon les seuils, contrôle IA, décisions tracées, notifications, supervision et mesure des délais. Les workflows n8n et les écrans seront développés séparément.
 
-Le PDF ne donne ni la liste détaillée des champs de formulaire, ni les seuils chiffrés, ni les délais de décision et de relance. Les champs ci-dessous sont des choix de modélisation ; les valeurs métier restent à définir. Les pièces jointes sont possibles, sans être obligatoires. Leur analyse par l'IA, présentée comme un bonus dans le document, n'est pas implémentée.
+Le PDF ne donne ni la liste détaillée des champs de formulaire, ni les seuils chiffrés, ni les délais de décision et de relance. Les champs ci-dessous sont des choix de modélisation ; les valeurs métier ont ensuite été [validées par l’équipe](business-rules.md). Les pièces jointes sont possibles, sans être obligatoires. Leur analyse par l'IA, présentée comme un bonus dans le document, n'est pas implémentée.
 
 ## Tables et relations
 
@@ -13,6 +13,9 @@ erDiagram
   PROFILES ||--o{ REQUESTS : demandeur
   PROFILES ||--o{ LEAVE_BALANCES : soldes
   LEAVE_BALANCES ||--o{ LEAVE_BALANCE_HISTORY : historique
+  LEAVE_BALANCES ||--o{ LEAVE_ALLOCATIONS : reservations
+  REQUESTS ||--o{ LEAVE_ALLOCATIONS : repartition_annuelle
+  PROFILES ||--o{ HR_ROUTING_SETTINGS : referents
   REQUEST_TYPES ||--o{ REQUESTS : type
   REQUEST_TYPES ||--o{ APPROVAL_RULES : versions
   APPROVAL_RULES o|--o{ REQUESTS : circuit_capture
@@ -41,8 +44,18 @@ erDiagram
     text request_type FK
     request_status status
     uuid approval_rule_id FK
+    uuid hr_referent_id FK
+    uuid director_referent_id FK
+    boolean start_half_day
+    boolean end_half_day
     timestamptz submitted_at
     timestamptz completed_at
+  }
+  LEAVE_ALLOCATIONS {
+    uuid request_id PK,FK
+    uuid balance_id PK,FK
+    numeric days
+    text state
   }
   APPROVAL_STEPS {
     uuid id PK
@@ -68,6 +81,8 @@ erDiagram
 | `request_events` | Créations, modifications de brouillon, changements de statut et décisions. |
 | `leave_balances` | Droits annuels, jours consommés et réservés, disponible calculé. |
 | `leave_balance_history` | Valeurs avant/après des soldes, auteur et date. |
+| `leave_allocations` | Jours réservés, consommés ou libérés par demande et par année. |
+| `hr_routing_settings` | Référents RH/DRH et suppléants, configuration unique. |
 | `request_attachments` | Métadonnées des fichiers ; contenu dans le bucket privé `hr-attachments`. |
 | `workflow_runs` | Workflow n8n, identifiant d'exécution, tentative, durée et erreur. |
 | `ai_reviews` | Contrôles structurés, qualification, synthèse, brouillon de réponse, modèle, tokens et coût. |
@@ -82,31 +97,22 @@ Tous les types ont un titre, une description facultative et un demandeur. Un bro
 
 | Type | Champs requis à la soumission | Champs spécifiques |
 |---|---|---|
-| Congés | Dates de début/fin, nombre de jours demandé | `requested_days`, décimal pour les journées partielles |
+| Congés | Dates de début/fin et bornes des demi-journées | `requested_days` calculé par la base, `start_half_day` et `end_half_day` |
 | Télétravail | Dates de début/fin | Période |
 | Matériel | Montant estimé total, quantité | Le titre désigne le matériel |
 | Formation | Dates de début/fin, montant estimé total | Organisme facultatif `training_provider` ; le titre désigne la formation |
 
 Les montants de demandes sont exprimés en EUR ; les coûts LLM peuvent être en EUR ou USD et ne doivent pas être additionnés sans conversion. Les dates inversées, quantités nulles/négatives, montants négatifs et champs appartenant à un autre type sont refusés. Un montant nul (0 EUR) est permis pour une formation ou un matériel gratuit.
 
-Le nombre de jours ouvrés, les jours fériés, la disponibilité du solde par année et la détection de doublons seront vérifiés par le workflow. Une demande couvrant plusieurs années doit être répartie entre les soldes correspondants par ce traitement. Le LLM fournit une synthèse ; il ne dispose pas d'un droit de modifier les rôles, soldes ou décisions. La réservation/consommation des congés devra être atomique et idempotente lors du développement du workflow ; le schéma seul n'effectue pas encore ces mouvements.
+Le calendrier de démonstration compte lundi-vendredi, sans exclusion des jours fériés. La base calcule les demi-journées, contrôle les soldes et les chevauchements congés/télétravail, puis réserve les jours atomiquement à la soumission. L'approbation consomme la réservation ; le refus ou l'annulation la libère. Les demandes multi-années sont réparties entre les soldes annuels.
 
 ## Circuits configurables
 
-Les quatre règles initiales sont **désactivées**, sans valeur de seuil ou de délai inventée.
+Les circuits sont maintenant **actifs**, selon les [règles métier validées](business-rules.md) : manager puis RH ; DRH au-delà de 10 jours de congés, de 1 000 EUR de matériel ou de 1 500 EUR de formation. Télétravail sans DRH. Délai : 48 heures calendaires ; relance : 24 heures.
 
-Avant d'activer un circuit, définir :
+Une seule version est active par type. Après sa première utilisation, ses paramètres sont figés ; elle peut uniquement être désactivée. Pour changer un circuit, créer une nouvelle version. Les demandes déjà soumises conservent leur règle, leur manager et leurs référents RH/DRH.
 
-- `decision_hours` : délai accordé à chaque validateur ;
-- `reminder_hours` : intervalle des relances, positif et inférieur ou égal au délai ;
-- `director_amount_above` : seuil de montant déclenchant le DRH ;
-- `director_days_above` : seuil de durée de congés déclenchant le DRH.
-
-Manager puis RH sont requis. Le DRH est requis si le montant **dépasse strictement** son seuil **ou** si le nombre de jours **dépasse strictement** son seuil. Un seuil `NULL` signifie que ce critère n'est pas utilisé : décider explicitement des critères pertinents pour chaque type avant activation. Au seuil exact, il n'y a pas d'escalade selon ce critère.
-
-Une seule version est active par type. Après sa première utilisation, ses paramètres sont figés ; elle peut uniquement être désactivée. Pour changer un circuit, désactiver l'ancienne version et insérer une nouvelle version. Les demandes déjà soumises conservent leur règle et leur manager.
-
-Les données de tests comportent des seuils et délais purement fictifs, annulés par `ROLLBACK`. Elles ne configurent pas l'environnement métier.
+Les référents sont configurés dans `hr_routing_settings`, avec des suppléants facultatifs pour éviter toute auto-approbation. Ils sont initialisés avec les comptes fictifs par `npm run business:seed`.
 
 ## États et opérations
 
@@ -181,12 +187,12 @@ Le contenu est téléchargeable uniquement par les lecteurs autorisés de la dem
 
 1. Détecter une demande `submitted` et passer à `under_review`.
 2. Enregistrer une `workflow_runs` avec un identifiant d'exécution unique.
-3. Effectuer les contrôles de dates, de solde et de doublons ; enregistrer `ai_reviews` avec qualification et synthèse. En cas d'erreur, conserver l'erreur et relancer le traitement, sans considérer le contrôle comme réussi.
-4. Lire la règle capturée et créer les étapes `waiting` : manager affecté, RH choisi, DRH choisi si dépassement.
+3. Appeler `get_hr_request_checks` pour les contrôles déterministes de dates, de solde et de doublons ; enregistrer `ai_reviews` avec qualification et synthèse. En cas d'erreur, conserver l'erreur et relancer le traitement, sans considérer le contrôle comme réussi.
+4. Appeler `prepare_hr_approvals` pour créer les étapes `waiting` depuis les référents capturés, avec le DRH si requis.
 5. Passer à `pending_approval`, puis activer le manager (`pending`). La base fixe l'échéance et met sa notification en file.
-6. À chaque décision utilisateur, activer l'étape suivante après l'accord précédent. Après un refus, terminer en `rejected` ; après tous les accords, terminer en `approved`. Pour les congés, intégrer le mouvement de solde dans une transaction contrôlée avant de finaliser.
+6. À chaque décision utilisateur, activer l'étape suivante après l'accord précédent. Après un refus, terminer en `rejected` ; après tous les accords, terminer en `approved`. Pour les congés, la base effectue automatiquement le mouvement du solde dans la transaction du changement de statut.
 7. Traiter les notifications en file, envoyer les emails vers MailHog (`mailhog:1025`) ou Slack, puis enregistrer le résultat d'envoi.
-8. Déclencher les relances selon la règle, avec une clé unique par étape/canal/occurrence ; vérifier que la demande et l'étape sont encore actives avant chaque envoi.
+8. Appeler périodiquement `queue_hr_approval_reminders` pour les relances à 24 h et alertes RH à 48 h ; vérifier que la demande et l’étape sont encore actives avant chaque envoi.
 
 Chaque changement de statut crée automatiquement une notification au demandeur. L'activation d'une étape crée une notification au validateur. Les clés de déduplication évitent de créer plusieurs lignes pour le même événement ; n8n devra encore gérer la prise en charge exclusive des jobs et les reprises SMTP. Une clé unique ne garantit pas à elle seule un envoi externe exactement une fois.
 
@@ -198,15 +204,17 @@ Sur une installation déjà démarrée, sans réinitialiser la base :
 
 ```powershell
 npm run db:migrate
+npm run business:seed
 npm run db:types
 npm run db:lint
 npm run db:test
+npm run db:verify
 npm test
 ```
 
-Les migrations sont additives et conservent les comptes déjà créés. Les quatre types et leurs règles désactivées sont initialisés par les migrations. Aucun solde, demande ou observation réelle n'est inventé.
+Les migrations sont additives et conservent les comptes déjà créés. Les quatre types et leurs règles actives sont initialisés par les migrations. Les soldes et référents fictifs sont initialisés séparément par `business:seed` ; aucune demande ou observation réelle n’est inventée.
 
-Les tests pgTAP utilisent une transaction annulée en fin de test, six utilisateurs fictifs et un circuit fictif. Ils vérifient les accès, les contraintes, les RPC et le cycle complet avec DRH. Les tests navigateur existants continuent de vérifier l'authentification.
+Les tests pgTAP utilisent une transaction annulée en fin de test, des utilisateurs fictifs et un circuit fictif. Ils vérifient les accès, les contraintes, les RPC et le cycle complet avec DRH. Les tests navigateur existants continuent de vérifier l'authentification.
 
 Les types `src/types/database.ts` sont générés depuis le schéma public et utilisés par les clients Supabase. Les droits d'écriture réels restent ceux de PostgreSQL : les types générés ne constituent pas une autorisation.
 

@@ -1,0 +1,3 @@
+import Link from "next/link";
+import RequestForm from "../request-form";
+export default function NewRequest(){return <main className="dashboard-main"><Link className="back" href="/tableau-de-bord">← Mes demandes</Link><p className="eyebrow muted">NOUVELLE DEMANDE</p><h1>De quoi avez-vous besoin ?</h1><p className="intro">Congés, télétravail, matériel ou formation : préparez votre demande.</p><RequestForm/></main>;}
