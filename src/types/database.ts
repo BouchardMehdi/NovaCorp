@@ -84,6 +84,70 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"hr_routing_settings": {
+                  Row: {
+                    "alternate_director_id": string | null,"alternate_hr_id": string | null,"director_referent_id": string,"hr_referent_id": string,"singleton": boolean,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "alternate_director_id"?: string | null,"alternate_hr_id"?: string | null,"director_referent_id": string,"hr_referent_id": string,"singleton"?: boolean,"updated_at"?: string
+                  }
+                  Update: {
+                    "alternate_director_id"?: string | null,"alternate_hr_id"?: string | null,"director_referent_id"?: string,"hr_referent_id"?: string,"singleton"?: boolean,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "hr_routing_settings_alternate_director_id_fkey"
+      columns: ["alternate_director_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "hr_routing_settings_alternate_hr_id_fkey"
+      columns: ["alternate_hr_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "hr_routing_settings_director_referent_id_fkey"
+      columns: ["director_referent_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "hr_routing_settings_hr_referent_id_fkey"
+      columns: ["hr_referent_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"leave_allocations": {
+                  Row: {
+                    "balance_id": string,"created_at": string,"days": number,"request_id": string,"state": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "balance_id": string,"created_at"?: string,"days": number,"request_id": string,"state"?: string,"updated_at"?: string
+                  }
+                  Update: {
+                    "balance_id"?: string,"created_at"?: string,"days"?: number,"request_id"?: string,"state"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "leave_allocations_balance_id_fkey"
+      columns: ["balance_id"]
+isOneToOne: false
+      referencedRelation: "leave_balances"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "leave_allocations_request_id_fkey"
+      columns: ["request_id"]
+isOneToOne: false
+      referencedRelation: "requests"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"leave_balance_history": {
                   Row: {
                     "actor_id": string | null,"balance_id": string,"id": number,"new_values": NonNullable<Json>,"old_values": Json | null,"recorded_at": string
@@ -276,14 +340,14 @@ isOneToOne: false
                   ]
                 },"requests": {
                   Row: {
-                    "amount": number | null,"approval_rule_id": string | null,"completed_at": string | null,"created_at": string,"currency": string,"description": string,"end_date": string | null,"id": string,"manager_id": string | null,"quantity": number | null,"reference": number,"request_type": string,"requested_days": number | null,"requester_id": string,"start_date": string | null,"status": Database["public"]['Enums']["request_status"],"submitted_at": string | null,"title": string,"training_provider": string | null,"updated_at": string
+                    "amount": number | null,"approval_rule_id": string | null,"completed_at": string | null,"created_at": string,"currency": string,"description": string,"director_referent_id": string | null,"end_date": string | null,"end_half_day": boolean,"hr_referent_id": string | null,"id": string,"manager_id": string | null,"quantity": number | null,"reference": number,"request_type": string,"requested_days": number | null,"requester_id": string,"start_date": string | null,"start_half_day": boolean,"status": Database["public"]['Enums']["request_status"],"submitted_at": string | null,"title": string,"training_provider": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount"?: number | null,"approval_rule_id"?: string | null,"completed_at"?: string | null,"created_at"?: string,"currency"?: string,"description"?: string,"end_date"?: string | null,"id"?: string,"manager_id"?: string | null,"quantity"?: number | null,"reference"?: never,"request_type": string,"requested_days"?: number | null,"requester_id"?: string,"start_date"?: string | null,"status"?: Database["public"]['Enums']["request_status"],"submitted_at"?: string | null,"title": string,"training_provider"?: string | null,"updated_at"?: string
+                    "amount"?: number | null,"approval_rule_id"?: string | null,"completed_at"?: string | null,"created_at"?: string,"currency"?: string,"description"?: string,"director_referent_id"?: string | null,"end_date"?: string | null,"end_half_day"?: boolean,"hr_referent_id"?: string | null,"id"?: string,"manager_id"?: string | null,"quantity"?: number | null,"reference"?: never,"request_type": string,"requested_days"?: number | null,"requester_id"?: string,"start_date"?: string | null,"start_half_day"?: boolean,"status"?: Database["public"]['Enums']["request_status"],"submitted_at"?: string | null,"title": string,"training_provider"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "amount"?: number | null,"approval_rule_id"?: string | null,"completed_at"?: string | null,"created_at"?: string,"currency"?: string,"description"?: string,"end_date"?: string | null,"id"?: string,"manager_id"?: string | null,"quantity"?: number | null,"reference"?: never,"request_type"?: string,"requested_days"?: number | null,"requester_id"?: string,"start_date"?: string | null,"status"?: Database["public"]['Enums']["request_status"],"submitted_at"?: string | null,"title"?: string,"training_provider"?: string | null,"updated_at"?: string
+                    "amount"?: number | null,"approval_rule_id"?: string | null,"completed_at"?: string | null,"created_at"?: string,"currency"?: string,"description"?: string,"director_referent_id"?: string | null,"end_date"?: string | null,"end_half_day"?: boolean,"hr_referent_id"?: string | null,"id"?: string,"manager_id"?: string | null,"quantity"?: number | null,"reference"?: never,"request_type"?: string,"requested_days"?: number | null,"requester_id"?: string,"start_date"?: string | null,"start_half_day"?: boolean,"status"?: Database["public"]['Enums']["request_status"],"submitted_at"?: string | null,"title"?: string,"training_provider"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -291,6 +355,18 @@ isOneToOne: false
       columns: ["approval_rule_id"]
 isOneToOne: false
       referencedRelation: "approval_rules"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "requests_director_referent_id_fkey"
+      columns: ["director_referent_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "requests_hr_referent_id_fkey"
+      columns: ["hr_referent_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "requests_manager_id_fkey"
@@ -338,7 +414,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "cancel_hr_request":
+            "calculate_leave_days":
+{ Args: { "p_end": string,"p_end_half"?: boolean,"p_start": string,"p_start_half"?: boolean }; Returns: number
+                           },
+"cancel_hr_request":
 { Args: { "p_request_id": string }; Returns: {
               "amount": number | null,
 "approval_rule_id": string | null,
@@ -346,7 +425,10 @@ isOneToOne: false
 "created_at": string,
 "currency": string,
 "description": string,
+"director_referent_id": string | null,
 "end_date": string | null,
+"end_half_day": boolean,
+"hr_referent_id": string | null,
 "id": string,
 "manager_id": string | null,
 "quantity": number | null,
@@ -355,6 +437,7 @@ isOneToOne: false
 "requested_days": number | null,
 "requester_id": string,
 "start_date": string | null,
+"start_half_day": boolean,
 "status": Database["public"]['Enums']["request_status"],
 "submitted_at": string | null,
 "title": string,
@@ -388,6 +471,33 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"get_hr_request_checks":
+{ Args: { "p_request_id": string }; Returns: Json
+                           },
+"prepare_hr_approvals":
+{ Args: { "p_request_id": string }; Returns: {
+              "activated_at": string | null,
+"assignee_id": string,
+"created_at": string,
+"decided_at": string | null,
+"decided_by": string | null,
+"decision_comment": string | null,
+"due_at": string | null,
+"id": string,
+"position": number,
+"request_id": string,
+"required_role": Database["public"]['Enums']["app_role"],
+"status": Database["public"]['Enums']["approval_status"]
+            }[]
+                          SetofOptions: {
+        from: "*"
+        to: "approval_steps"
+        isOneToOne: false
+        isSetofReturn: true
+      } },
+"queue_hr_approval_reminders":
+{ Args: { "p_now"?: string }; Returns: number
+                           },
 "submit_hr_request":
 { Args: { "p_request_id": string }; Returns: {
               "amount": number | null,
@@ -396,7 +506,10 @@ isOneToOne: false
 "created_at": string,
 "currency": string,
 "description": string,
+"director_referent_id": string | null,
 "end_date": string | null,
+"end_half_day": boolean,
+"hr_referent_id": string | null,
 "id": string,
 "manager_id": string | null,
 "quantity": number | null,
@@ -405,6 +518,7 @@ isOneToOne: false
 "requested_days": number | null,
 "requester_id": string,
 "start_date": string | null,
+"start_half_day": boolean,
 "status": Database["public"]['Enums']["request_status"],
 "submitted_at": string | null,
 "title": string,
@@ -425,7 +539,10 @@ isOneToOne: false
 "created_at": string,
 "currency": string,
 "description": string,
+"director_referent_id": string | null,
 "end_date": string | null,
+"end_half_day": boolean,
+"hr_referent_id": string | null,
 "id": string,
 "manager_id": string | null,
 "quantity": number | null,
@@ -434,6 +551,7 @@ isOneToOne: false
 "requested_days": number | null,
 "requester_id": string,
 "start_date": string | null,
+"start_half_day": boolean,
 "status": Database["public"]['Enums']["request_status"],
 "submitted_at": string | null,
 "title": string,

@@ -11,7 +11,7 @@ Plateforme interne de gestion des demandes RH, réalisée dans le cadre du fil r
 
 L’authentification et le schéma complet de la base RH sont en place : quatre types de demandes, règles de validation versionnées, étapes, historique, soldes de congés, pièces jointes privées, contrôles IA, exécutions n8n, notifications et mesures des délais. Les formulaires, le dashboard métier et les workflows n8n restent à développer.
 
-Le [schéma relationnel et les permissions](docs/database-schema.md) décrivent les tables, les opérations et les paramètres métier à définir. Les seuils et délais n’étant pas chiffrés dans le PDF, les règles initiales sont désactivées.
+Le [schéma relationnel et les permissions](docs/database-schema.md) décrivent les tables, les opérations et les permissions métier. Les [règles métier validées](docs/business-rules.md) sont actives : seuils DRH, délai de 48 h, relance à 24 h, calcul et réservation des congés. Les envois et la planification restent à brancher dans n8n.
 
 ## Prérequis
 
@@ -33,6 +33,7 @@ npm run supabase:start
 npm run local:env
 npm run db:migrate
 npm run auth:seed
+npm run business:seed
 npm run dev
 ```
 
@@ -40,7 +41,7 @@ Ouvrir **http://localhost:3000/connexion**.
 
 Le premier démarrage de Supabase télécharge plusieurs images et applique la migration des profils. MailHog crée le réseau Docker `novacorp_default`, partagé avec Supabase. Les ports MailHog sont liés à l'interface locale. La CLI Supabase peut publier ses ports sur toutes les interfaces : cet environnement reste réservé au développement local.
 
-`npm run local:env` écrit l'URL, la clé publique et la clé d'administration locales dans **.env.local**, sans les afficher. Ce fichier est ignoré par Git. La clé d'administration sert uniquement au script local de création des comptes ; elle n'est jamais utilisée par les clients Next.js.
+`npm run local:env` écrit l'URL, la clé publique et la clé d'administration locales dans **.env.local**, sans les afficher. Ce fichier est ignoré par Git. La clé d'administration sert uniquement aux scripts locaux d'initialisation ; elle n'est jamais utilisée par les clients Next.js.
 
 La clé publique peut être une clé publishable ou la clé anon fournie par la CLI. Les accès aux données restent soumis à la session utilisateur et aux politiques RLS.
 
@@ -95,6 +96,7 @@ Avec Supabase démarré et les comptes fictifs créés :
 ```powershell
 npm run db:lint
 npm run db:test
+npm run db:verify
 npm run lint
 npm run typecheck
 npm run build
@@ -126,7 +128,7 @@ npm run dev
 
 Après un changement de clés locales, relancer `npm run local:env` et redémarrer Next.js.
 
-**Attention : `npx supabase db reset` efface les données de la base locale.** Si une réinitialisation est volontaire, recréer ensuite les comptes avec `npm run auth:seed`.
+**Attention : `npx supabase db reset` efface les données de la base locale.** Si une réinitialisation est volontaire, recréer ensuite les comptes avec `npm run auth:seed`, puis les soldes et référents avec `npm run business:seed`.
 
 ## Structure
 
@@ -141,6 +143,7 @@ supabase/migrations/           Schéma RH, politiques RLS et opérations contrô
 supabase/tests/database/       Tests SQL transactionnels
 src/types/database.ts          Types publics générés (npm run db:types)
 docs/database-schema.md        Schéma relationnel et contrat pour n8n
+docs/business-rules.md         Règles métier validées et initialisation
 scripts/                       Configuration locale et comptes fictifs
 tests/                         Tests de connexion et de permissions
 compose.yaml                   MailHog et réseau Docker local

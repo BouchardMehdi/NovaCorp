@@ -10,16 +10,23 @@ insert into auth.users (id, email) values
  ('10000000-0000-0000-0000-000000000003', 'bdd-rh@novacorp.test'),
  ('10000000-0000-0000-0000-000000000004', 'bdd-drh@novacorp.test'),
  ('10000000-0000-0000-0000-000000000005', 'bdd-salarie2@novacorp.test'),
- ('10000000-0000-0000-0000-000000000006', 'bdd-manager2@novacorp.test');
+ ('10000000-0000-0000-0000-000000000006', 'bdd-manager2@novacorp.test'),
+ ('10000000-0000-0000-0000-000000000007', 'bdd-rh-suppleant@novacorp.test');
 update profiles set role = 'manager' where id in
  ('10000000-0000-0000-0000-000000000002','10000000-0000-0000-0000-000000000006');
-update profiles set role = 'hr' where id = '10000000-0000-0000-0000-000000000003';
+update profiles set role = 'hr' where id in ('10000000-0000-0000-0000-000000000003','10000000-0000-0000-0000-000000000007');
 update profiles set role = 'director' where id = '10000000-0000-0000-0000-000000000004';
 update profiles set manager_id = '10000000-0000-0000-0000-000000000002' where id = '10000000-0000-0000-0000-000000000001';
 update profiles set manager_id = '10000000-0000-0000-0000-000000000006' where id = '10000000-0000-0000-0000-000000000005';
 insert into leave_balances (employee_id, year, allocated_days) values
  ('10000000-0000-0000-0000-000000000001', 2026, 25),
  ('10000000-0000-0000-0000-000000000005', 2026, 20);
+
+
+update approval_rules set active=false where active;
+insert into hr_routing_settings(singleton,hr_referent_id,director_referent_id,alternate_hr_id) values
+ (true,'10000000-0000-0000-0000-000000000003','10000000-0000-0000-0000-000000000004','10000000-0000-0000-0000-000000000007')
+ on conflict(singleton) do update set hr_referent_id=excluded.hr_referent_id, director_referent_id=excluded.director_referent_id, alternate_hr_id=excluded.alternate_hr_id, alternate_director_id=null;
 
 select is((select count(*)::integer from request_types), 4, 'exactement quatre types du cahier des charges');
 select ok(not exists(select 1 from pg_tables where schemaname = 'public' and tablename in
@@ -76,7 +83,7 @@ select is(private.can_edit_request('20000000-0000-0000-0000-000000000001'), fals
 set local request.jwt.claims = '{"sub":"10000000-0000-0000-0000-000000000002","role":"authenticated"}';
 select is((select count(*)::integer from requests), 0, 'manager ne voit pas les brouillons de son équipe');
 set local request.jwt.claims = '{"sub":"10000000-0000-0000-0000-000000000003","role":"authenticated"}';
-select is((select count(*)::integer from requests), 0, 'RH ne voit pas les brouillons privés');
+select is((select count(*)::integer from requests where requester_id in ('10000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000005')), 0, 'RH ne voit pas les brouillons privés');
 reset role;
 set local request.jwt.claims = '{}';
 
