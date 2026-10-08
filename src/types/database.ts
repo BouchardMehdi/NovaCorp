@@ -196,14 +196,14 @@ isOneToOne: false
                   ]
                 },"notifications": {
                   Row: {
-                    "approval_step_id": string | null,"attempts": number,"channel": Database["public"]['Enums']["notification_channel"],"created_at": string,"deduplication_key": string,"event_id": number | null,"id": string,"kind": string,"last_error": string | null,"next_attempt_at": string,"provider_message_id": string | null,"recipient_id": string,"request_id": string,"sent_at": string | null,"status": Database["public"]['Enums']["delivery_status"]
+                    "approval_step_id": string | null,"attempts": number,"channel": Database["public"]['Enums']["notification_channel"],"created_at": string,"deduplication_key": string,"event_id": number | null,"id": string,"kind": string,"last_error": string | null,"lease_token": string | null,"lease_until": string | null,"next_attempt_at": string,"provider_message_id": string | null,"recipient_id": string,"request_id": string,"sent_at": string | null,"status": Database["public"]['Enums']["delivery_status"]
                   }
                   ComputedFields: never
                   Insert: {
-                    "approval_step_id"?: string | null,"attempts"?: number,"channel"?: Database["public"]['Enums']["notification_channel"],"created_at"?: string,"deduplication_key": string,"event_id"?: number | null,"id"?: string,"kind": string,"last_error"?: string | null,"next_attempt_at"?: string,"provider_message_id"?: string | null,"recipient_id": string,"request_id": string,"sent_at"?: string | null,"status"?: Database["public"]['Enums']["delivery_status"]
+                    "approval_step_id"?: string | null,"attempts"?: number,"channel"?: Database["public"]['Enums']["notification_channel"],"created_at"?: string,"deduplication_key": string,"event_id"?: number | null,"id"?: string,"kind": string,"last_error"?: string | null,"lease_token"?: string | null,"lease_until"?: string | null,"next_attempt_at"?: string,"provider_message_id"?: string | null,"recipient_id": string,"request_id": string,"sent_at"?: string | null,"status"?: Database["public"]['Enums']["delivery_status"]
                   }
                   Update: {
-                    "approval_step_id"?: string | null,"attempts"?: number,"channel"?: Database["public"]['Enums']["notification_channel"],"created_at"?: string,"deduplication_key"?: string,"event_id"?: number | null,"id"?: string,"kind"?: string,"last_error"?: string | null,"next_attempt_at"?: string,"provider_message_id"?: string | null,"recipient_id"?: string,"request_id"?: string,"sent_at"?: string | null,"status"?: Database["public"]['Enums']["delivery_status"]
+                    "approval_step_id"?: string | null,"attempts"?: number,"channel"?: Database["public"]['Enums']["notification_channel"],"created_at"?: string,"deduplication_key"?: string,"event_id"?: number | null,"id"?: string,"kind"?: string,"last_error"?: string | null,"lease_token"?: string | null,"lease_until"?: string | null,"next_attempt_at"?: string,"provider_message_id"?: string | null,"recipient_id"?: string,"request_id"?: string,"sent_at"?: string | null,"status"?: Database["public"]['Enums']["delivery_status"]
                   }
                   Relationships: [
                     {
@@ -390,14 +390,14 @@ isOneToOne: false
                   ]
                 },"workflow_runs": {
                   Row: {
-                    "attempt": number,"error_code": string | null,"error_message": string | null,"execution_id": string,"finished_at": string | null,"id": string,"request_id": string,"started_at": string,"status": Database["public"]['Enums']["execution_status"],"workflow_key": string
+                    "attempt": number,"error_code": string | null,"error_message": string | null,"execution_id": string,"finished_at": string | null,"id": string,"lease_token": string | null,"lease_until": string | null,"request_id": string,"retry_after": string | null,"started_at": string,"status": Database["public"]['Enums']["execution_status"],"workflow_key": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "attempt"?: number,"error_code"?: string | null,"error_message"?: string | null,"execution_id": string,"finished_at"?: string | null,"id"?: string,"request_id": string,"started_at"?: string,"status"?: Database["public"]['Enums']["execution_status"],"workflow_key": string
+                    "attempt"?: number,"error_code"?: string | null,"error_message"?: string | null,"execution_id": string,"finished_at"?: string | null,"id"?: string,"lease_token"?: string | null,"lease_until"?: string | null,"request_id": string,"retry_after"?: string | null,"started_at"?: string,"status"?: Database["public"]['Enums']["execution_status"],"workflow_key": string
                   }
                   Update: {
-                    "attempt"?: number,"error_code"?: string | null,"error_message"?: string | null,"execution_id"?: string,"finished_at"?: string | null,"id"?: string,"request_id"?: string,"started_at"?: string,"status"?: Database["public"]['Enums']["execution_status"],"workflow_key"?: string
+                    "attempt"?: number,"error_code"?: string | null,"error_message"?: string | null,"execution_id"?: string,"finished_at"?: string | null,"id"?: string,"lease_token"?: string | null,"lease_until"?: string | null,"request_id"?: string,"retry_after"?: string | null,"started_at"?: string,"status"?: Database["public"]['Enums']["execution_status"],"workflow_key"?: string
                   }
                   Relationships: [
                     {
@@ -450,6 +450,15 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"claim_hr_manager_email":
+{ Args: { "p_request_id"?: string }; Returns: Json
+                           },
+"claim_hr_qualification":
+{ Args: { "p_execution_id": string,"p_model": string,"p_provider": string,"p_request_id"?: string }; Returns: Json
+                           },
+"complete_hr_qualification":
+{ Args: { "p_input_tokens"?: number,"p_lease_token": string,"p_output_tokens"?: number,"p_result": Json,"p_run_id": string }; Returns: Json
+                           },
 "decide_hr_approval":
 { Args: { "p_approve": boolean,"p_comment"?: string,"p_step_id": string }; Returns: {
               "activated_at": string | null,
@@ -471,6 +480,12 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"fail_hr_qualification":
+{ Args: { "p_error_code": string,"p_lease_token": string,"p_run_id": string }; Returns: Json
+                           },
+"finish_hr_manager_email":
+{ Args: { "p_lease_token": string,"p_message_id"?: string,"p_notification_id": string,"p_sent": boolean }; Returns: Json
+                           },
 "get_hr_request_checks":
 { Args: { "p_request_id": string }; Returns: Json
                            },

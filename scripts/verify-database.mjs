@@ -80,6 +80,15 @@ try {
       ('22000000-0000-0000-0000-000000000004','12000000-0000-0000-0000-000000000001','leave','Course période B','2026-12-01','2026-12-14');`);
   await checkRace(["22000000-0000-0000-0000-000000000003", "22000000-0000-0000-0000-000000000004"], 10);
   console.log("Concurrence : deux périodes identiques ne sont pas réservées simultanément.");
+  sql("insert into public.requests(id,requester_id,request_type,title,amount,quantity) values('22000000-0000-0000-0000-000000000005','12000000-0000-0000-0000-000000000001','equipment','Course qualification',80,1); set role authenticated; set request.jwt.claims='{\"sub\":\"12000000-0000-0000-0000-000000000001\",\"role\":\"authenticated\"}'; select submit_hr_request('22000000-0000-0000-0000-000000000005');");
+  const qualifications=await Promise.all(["claim-a","claim-b"].map(async execution=>{
+    const {stdout}=await execAsync("docker",[...psql,"-At","-c",
+      "begin; set local role service_role; select claim_hr_qualification('"+execution+"','ollama','qwen3:1.7b','22000000-0000-0000-0000-000000000005'); select pg_sleep(0.3); commit;"],{encoding:"utf8",timeout:15000});
+    return JSON.parse(stdout.split(/\r?\n/).find(line=>line.startsWith("{"))).claimed;
+  }));
+  assert.equal(qualifications.filter(Boolean).length,1);
+  console.log("Concurrence : une seule exécution n8n réserve la qualification.");
+
 } catch (error) {
   console.error(error.stderr || error.message);
   process.exitCode = 1;

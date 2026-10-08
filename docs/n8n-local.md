@@ -47,10 +47,10 @@ L’arrêt conserve le volume et les workflows. Les emails MailHog restent en m�
 
 ## Prochaine étape
 
-Cette branche installe n8n et connecte les services. Le workflow métier reste à construire : collecte des demandes soumises, contrôles SQL, appel LLM, préparation et activation des étapes, avancement après décision, notifications et relances.
+Le setup connecte les services. La [qualification avec Ollama](n8n-qualification.md) collecte désormais les demandes, exécute les contrôles, produit la synthèse et active le manager. L’avancement après décision, les notifications salarié et les relances restent à construire.
 
 Pour les RPC Supabase, utiliser un nœud HTTP Request avec l’authentification prédéfinie **Supabase API**, la connexion importée et une URL `http://supabase_kong_NovaCorp:8000/rest/v1/rpc/<fonction>`. Les paramètres sont transmis en JSON par POST. Le contrat des fonctions figure dans [les règles métier](business-rules.md) et [le schéma](database-schema.md).
 
-Le fournisseur LLM et sa clé API seront configurés lors du workflow de qualification ; aucune clé LLM n’est requise pour cette installation.
+Le LLM utilise maintenant Ollama et Qwen3 1.7B en local, sans clé API payante. Voir la [configuration du modèle](n8n-qualification.md).
 
 Références officielles : [Docker Compose n8n](https://docs.n8n.io/deploy/host-n8n/install-options/install-using-docker-compose.md), [commandes serveur](https://docs.n8n.io/hosting/cli-commands/), [connexion Supabase](https://docs.n8n.io/integrations/builtin/credentials/supabase/).
