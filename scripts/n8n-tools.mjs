@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 export function docker(args,input){
- return execFileSync("docker",args,{input,encoding:"utf8",maxBuffer:8*1024*1024,timeout:180000,stdio:["pipe","pipe","pipe"]});
+ return execFileSync("docker",args,{input,encoding:"utf8",maxBuffer:8*1024*1024,timeout:360000,stdio:["pipe","pipe","pipe"]});
 }
 export function container(){
  const id=docker(["compose","--profile","automation","ps","-q","n8n"]).trim();
