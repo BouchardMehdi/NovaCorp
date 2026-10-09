@@ -1,0 +1,162 @@
+{
+  "id": "novacorpSetupSmoke",
+  "name": "NovaCorp - Verification Supabase et MailHog",
+  "active": false,
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Verification manuelle",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "catalogue",
+      "name": "Lire le catalogue RH",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "url": "http://supabase_kong_NovaCorp:8000/rest/v1/request_types?select=code,label&active=eq.true&order=code",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "novacorpSupabaseLocal",
+          "name": "NovaCorp - Supabase local"
+        }
+      }
+    },
+    {
+      "id": "check",
+      "name": "Verifier les quatre types",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "catalogue-complet",
+              "leftValue": "={{ $input.all().map(item => item.json.code).sort().join(',') }}",
+              "rightValue": "equipment,leave,remote_work,training",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "mail",
+      "name": "Envoyer vers MailHog",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        720,
+        -80
+      ],
+      "executeOnce": true,
+      "parameters": {
+        "fromEmail": "no-reply@novacorp.test",
+        "toEmail": "verification@novacorp.test",
+        "subject": "NovaCorp - verification n8n",
+        "emailFormat": "text",
+        "text": "Connexion n8n validee : catalogue Supabase lu (4 types RH), email recu dans MailHog. Message fictif local, aucune demande salarie modifiee.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "smtp": {
+          "id": "novacorpMailhogLocal",
+          "name": "NovaCorp - MailHog local"
+        }
+      }
+    },
+    {
+      "id": "failure",
+      "name": "Catalogue incomplet",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        720,
+        160
+      ],
+      "parameters": {
+        "errorMessage": "Les quatre types de demandes RH ne sont pas disponibles."
+      }
+    }
+  ],
+  "connections": {
+    "Verification manuelle": {
+      "main": [
+        [
+          {
+            "node": "Lire le catalogue RH",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire le catalogue RH": {
+      "main": [
+        [
+          {
+            "node": "Verifier les quatre types",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verifier les quatre types": {
+      "main": [
+        [
+          {
+            "node": "Envoyer vers MailHog",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Catalogue incomplet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Paris"
+  },
+  "pinData": {}
+}

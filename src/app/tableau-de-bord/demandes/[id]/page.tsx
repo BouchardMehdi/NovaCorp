@@ -1,0 +1,24 @@
+import Link from "next/link";
+import {notFound} from "next/navigation";
+import {requireUser} from "@/lib/auth/session";
+import {types,statuses,roles,date,reference,validId} from "@/lib/hr";
+import {RequestControls,ApprovalControl} from "../request-controls";
+import Live from "../../live";
+export default async function Detail({params}:{params:Promise<{id:string}>}){
+ const {id}=await params;if(!validId(id))notFound();
+ const {supabase,user}=await requireUser();
+ const {data:r,error}=await supabase.from("requests").select("*").eq("id",id).maybeSingle();
+ if(error)throw new Error("La demande est temporairement indisponible.");if(!r)notFound();
+ const [{data:steps,error:stepError},{data:events,error:eventError},{data:owner}]=await Promise.all([supabase.from("approval_steps").select("*").eq("request_id",id).order("position"),supabase.from("request_events").select("*").eq("request_id",id).order("occurred_at",{ascending:false}).limit(50),supabase.from("profiles").select("first_name,last_name").eq("id",r.requester_id).maybeSingle()]);
+ if(stepError||eventError)throw new Error("Le suivi est temporairement indisponible.");
+ const own=r.requester_id===user.id;
+ const {data:review,error:reviewError}=own?{data:null,error:null}:await supabase.from("ai_reviews").select("summary,qualification").eq("request_id",id).eq("status","succeeded").order("finished_at",{ascending:false}).limit(1).maybeSingle();
+ const active=!["approved","rejected","cancelled"].includes(r.status);
+ return <main className="dashboard-main"><Live id={id}/><Link href="/tableau-de-bord" className="back">← Mes demandes</Link><div className="section-head"><p className="eyebrow muted">{reference(r.reference)} · {types[r.request_type]}</p><span className={"status status-"+r.status}>{statuses[r.status]}</span></div><h1>{r.title}</h1><p className="intro">{owner?owner.first_name+" "+owner.last_name:own?"Demande personnelle":"Demande d’un salarié"} · Créée le {date(r.created_at)}</p>
+ <section className="panel"><h2>Détails de la demande</h2><dl className="details">{r.start_date&&<><div><dt>Période</dt><dd>{date(r.start_date)}{r.start_half_day?" (après-midi)":""} → {date(r.end_date)}{r.end_half_day?" (midi)":""}</dd></div></>}{r.requested_days!==null&&<div><dt>Jours décomptés</dt><dd>{r.requested_days}</dd></div>}{r.amount!==null&&<div><dt>Montant estimé</dt><dd>{new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"}).format(r.amount)}</dd></div>}{r.quantity!==null&&<div><dt>Quantité</dt><dd>{r.quantity}</dd></div>}{r.training_provider&&<div><dt>Organisme</dt><dd>{r.training_provider}</dd></div>}</dl><p className="description">{r.description||"Aucune précision ajoutée."}</p>
+ {own&&r.status==="draft"&&<Link className="button secondary" href={"/tableau-de-bord/demandes/"+id+"/modifier"}>Modifier le brouillon</Link>}
+ {own&&active&&<RequestControls id={id} draft={r.status==="draft"}/>}</section>
+ {!own&&(review||reviewError)&&<section className="panel"><h2>Synthèse de qualification</h2>{reviewError?<p className="hint">La synthèse est temporairement indisponible.</p>:<><p className="hint">{{eligible:"Critères remplis",needs_review:"À examiner",invalid:"Points à vérifier"}[review?.qualification||"needs_review"]} · La décision appartient au validateur.</p><p className="description">{review?.summary}</p></>}</section>}
+ <section className="panel"><h2>Parcours de validation</h2>{!steps?.length&&<p className="hint">{r.status==="draft"?"Le parcours sera préparé après la soumission.":"La demande attend la préparation de son parcours de validation."}</p>}{steps?.map(step=><article className="step" key={step.id}><div className="section-head"><h3>{step.position}. {roles[step.required_role]}</h3><span className="status">{{waiting:"En attente",pending:"À valider",approved:"Approuvée",rejected:"Refusée",skipped:"Non requise"}[step.status]}</span></div>{step.due_at&&<p className="hint">Échéance : {new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium",timeStyle:"short"}).format(new Date(step.due_at))}</p>}{step.decision_comment&&<p className="description">{step.decision_comment}</p>}{step.assignee_id===user.id&&step.status==="pending"&&r.status==="pending_approval"&&<ApprovalControl step={step.id}/>}</article>)}</section>
+ <section className="panel"><h2>Historique</h2><p className="hint">Les 50 événements les plus récents.</p><ol className="timeline">{events?.map(event=><li key={event.id}><time>{new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium",timeStyle:"short"}).format(new Date(event.occurred_at))}</time><p>{event.new_status?statuses[event.new_status]:({created:"Demande créée",edited:"Brouillon modifié",approval_decided:"Décision de validation enregistrée",status_changed:"Statut modifié"}[event.event_type]||"Demande mise à jour")}</p>{event.comment&&<p className="description">{event.comment}</p>}</li>)}</ol></section></main>;
+}

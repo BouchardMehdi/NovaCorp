@@ -1,0 +1,2 @@
+-- Données fictives via Supabase Auth et API locale :
+-- npm run auth:seed puis npm run business:seed

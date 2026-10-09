@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+.env*
+!.env.example
+*.tsbuildinfo
+*.log
+playwright-report/
+test-results/
+supabase/.temp/
+supabase/.branches/
+%SystemDrive%/
+.npm-cache/
+NovaCorp/
