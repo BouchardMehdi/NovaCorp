@@ -1,0 +1,53 @@
+{
+  "id": "novacorpRequestsWebhook",
+  "name": "NovaCorp - Reception webhook requests (TP)",
+  "active": false,
+  "nodes": [
+    {
+      "id": "Recevoir la creation",
+      "name": "Recevoir la creation",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "novacorp-requests-insert-v1",
+      "position": [0, 0],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "novacorp-requests",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "novacorpRequestsWebhookAuth",
+          "name": "NovaCorp - Webhook requests"
+        }
+      }
+    },
+    {
+      "id": "Accuser reception",
+      "name": "Accuser reception",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [240, 0],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {received:true,event:$json.body.type,table:$json.body.table,request_id:$json.body.record.id,status:$json.body.record.status,business_processing:false} }}",
+        "options": {"responseCode": 200}
+      }
+    }
+  ],
+  "connections": {
+    "Recevoir la creation": {
+      "main": [[{"node": "Accuser reception", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Paris",
+    "executionTimeout": 30,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "pinData": {}
+}
