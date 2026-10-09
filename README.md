@@ -63,12 +63,13 @@ La clé publique peut être une clé publishable ou la clé anon fournie par la 
 |---|---|
 | `salarie@novacorp.test` | Salarié : Camille Durand |
 | `manager@novacorp.test` | Manager : Alex Martin |
+| `manager2@novacorp.test` | Responsable d’Alex : Sofia Moreau (manager) |
 | `rh@novacorp.test` | RH : Morgan Petit |
 | `drh@novacorp.test` | DRH : Lou Bernard |
 
 Mot de passe initial commun : **`NovaCorpDemo2026!`**.
 
-Ces identifiants sont réservés aux données fictives locales. Le salarié est rattaché au manager. Le script peut être relancé : il réutilise les comptes existants et met à jour leurs profils, sans réinitialiser leurs mots de passe.
+Ces identifiants sont réservés aux données fictives locales. Camille est rattaché à Alex, et Alex à Sofia pour ses propres demandes. Sofia valide les demandes d’Alex ; Alex continue de valider celles de son équipe. Sofia n’a pas de manager affecté dans ce jeu et ne peut donc pas soumettre de demande personnelle. Une affectation existante du responsable d’Alex est conservée lors des relances. Le script peut être relancé : il réutilise les comptes existants et met à jour leurs profils, sans réinitialiser leurs mots de passe.
 
 ### Jeu de données pour les essais manuels
 

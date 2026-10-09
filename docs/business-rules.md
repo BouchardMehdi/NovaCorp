@@ -22,12 +22,13 @@ Le manager vient du profil du demandeur. Les référents viennent de la ligne un
 En démonstration :
 
 - Manager de Camille : **Alex Martin**, `manager@novacorp.test`.
+- Manager d’Alex : **Sofia Moreau**, `manager2@novacorp.test`.
 - Référent RH : **Morgan Petit**, `rh@novacorp.test`.
 - Référent DRH : **Lou Bernard**, `drh@novacorp.test`.
 
 L'auto-approbation est interdite. Si le demandeur est le référent RH ou le référent DRH requis, un suppléant du même rôle doit être configuré (`alternate_hr_id` / `alternate_director_id`). Sinon la soumission échoue avec un message explicite. Aucun suppléant fictif supplémentaire n'est créé automatiquement.
 
-Alex n'a pas de manager dans le jeu initial : pour qu'il soumette une demande personnelle, il faut lui affecter un autre manager. Les profils RH et DRH sont rattachés à Alex par l'initialisation locale si aucun manager n'est déjà renseigné.
+Alex est rattaché à Sofia par l’initialisation des comptes si aucun responsable n’est déjà renseigné. Ses demandes personnelles suivent le même circuit : Sofia puis RH, et DRH selon les seuils. Sofia n’a pas de responsable affecté dans le jeu de démonstration : elle peut valider les demandes d’Alex, mais ne peut pas soumettre de demande personnelle tant qu’un autre responsable n’est pas configuré. Les profils RH et DRH sont rattachés à Alex par l'initialisation locale si aucun manager n'est déjà renseigné.
 
 `prepare_hr_approvals(p_request_id)`, réservé au backend, crée les étapes depuis les référents capturés. L'appel peut être répété sans dupliquer les étapes. Il n'active aucune étape et ne remplace pas l'orchestration n8n. Les validateurs affectés doivent toujours avoir le rôle attendu.
 

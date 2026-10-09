@@ -15,7 +15,7 @@ async function seed() {
     accounts.push(...data.users);
     if (data.users.length < 100) break;
   }
-  const emails = ["salarie@novacorp.test", "manager@novacorp.test", "rh@novacorp.test", "drh@novacorp.test"];
+  const emails = ["salarie@novacorp.test", "manager@novacorp.test", "rh@novacorp.test", "drh@novacorp.test", "manager2@novacorp.test"];
   const users = emails.map((email) => accounts.find((user) => user.email === email));
   if (users.some((user) => !user)) throw new Error("Créer d’abord les comptes fictifs avec npm run auth:seed.");
   const year = new Date().getFullYear();
