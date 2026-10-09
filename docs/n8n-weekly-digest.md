@@ -59,4 +59,4 @@ npm run n8n:digest:start
 
 Les tests SQL vérifient les bornes locales, les compteurs, l'isolation des équipes, les managers sans activité, les droits, les changements d'heure et les reprises SMTP. La reconstruction teste aussi deux préparations concurrentes.
 
-La vérification n8n crée un manager fictif sans demandes RH, prépare sa photographie de la semaine courante, exécute les deux workflows et vérifie l'email dans MailHog ainsi que le rejeu sans doublon. Elle nettoie son compte, son digest et ses workflows temporaires. Le lundi avant 8 h, elle vérifie le report de la livraison ; les tests SQL couvrent les autres horaires.
+La vérification n8n crée un manager fictif sans demandes RH, prépare sa photographie de la semaine courante, exécute les deux workflows et vérifie l'email dans MailHog ainsi que le rejeu sans doublon. Elle nettoie son compte, son digest et ses workflows temporaires. Le lundi avant 8 h, elle vérifie le report de la livraison ; les tests SQL couvrent les autres horaires. Si S5 est actif, arrêter aussi l'onboarding avec `npm run n8n:onboarding:stop` avant ce test, puis le reprendre avec `npm run n8n:onboarding:start`.

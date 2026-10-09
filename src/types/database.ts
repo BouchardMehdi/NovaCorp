@@ -84,6 +84,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"employee_onboardings": {
+                  Row: {
+                    "attempts": number,"checklist": NonNullable<Json>,"created_at": string,"employee_id": string,"id": string,"last_error": string | null,"lease_token": string | null,"lease_until": string | null,"next_attempt_at": string,"provider_message_id": string | null,"sent_at": string | null,"status": Database["public"]['Enums']["delivery_status"]
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempts"?: number,"checklist": NonNullable<Json>,"created_at"?: string,"employee_id": string,"id"?: string,"last_error"?: string | null,"lease_token"?: string | null,"lease_until"?: string | null,"next_attempt_at"?: string,"provider_message_id"?: string | null,"sent_at"?: string | null,"status"?: Database["public"]['Enums']["delivery_status"]
+                  }
+                  Update: {
+                    "attempts"?: number,"checklist"?: NonNullable<Json>,"created_at"?: string,"employee_id"?: string,"id"?: string,"last_error"?: string | null,"lease_token"?: string | null,"lease_until"?: string | null,"next_attempt_at"?: string,"provider_message_id"?: string | null,"sent_at"?: string | null,"status"?: Database["public"]['Enums']["delivery_status"]
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "employee_onboardings_employee_id_fkey"
+      columns: ["employee_id"]
+isOneToOne: true
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"hr_routing_settings": {
                   Row: {
                     "alternate_director_id": string | null,"alternate_hr_id": string | null,"director_referent_id": string,"hr_referent_id": string,"singleton": boolean,"updated_at": string
@@ -473,6 +493,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"claim_employee_onboarding":
+{ Args: { "p_employee_id"?: string }; Returns: Json
+                           },
 "claim_hr_manager_email":
 { Args: { "p_request_id"?: string }; Returns: Json
                            },
@@ -511,6 +534,9 @@ isOneToOne: false
       } },
 "fail_hr_qualification":
 { Args: { "p_error_code": string,"p_lease_token": string,"p_run_id": string }; Returns: Json
+                           },
+"finish_employee_onboarding":
+{ Args: { "p_lease_token": string,"p_message_id"?: string,"p_notification_id": string,"p_sent": boolean }; Returns: Json
                            },
 "finish_hr_manager_email":
 { Args: { "p_lease_token": string,"p_message_id"?: string,"p_notification_id": string,"p_sent": boolean }; Returns: Json

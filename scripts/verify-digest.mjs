@@ -26,8 +26,8 @@ async function execute(name,id){
 }
 async function messages(){const response=await fetch("http://127.0.0.1:8025/api/v2/messages?limit=500",{signal:AbortSignal.timeout(10000)});assert.ok(response.ok);return (await response.json()).items||[];}
 try{
- const published=JSON.parse(inside(container(),`const {DatabaseSync}=require('node:sqlite');const db=new DatabaseSync('/home/node/.n8n/database.sqlite');try{console.log(JSON.stringify(db.prepare('select id from workflow_entity where id in (?,?) and activeVersionId is not null').all('novacorpWeeklyDigest','novacorpDigestEmails')));}finally{db.close();}`));
- assert.equal(published.length,0,"Depubliez les digests avec npm run n8n:digest:stop avant le test.");
+ const published=JSON.parse(inside(container(),`const {DatabaseSync}=require('node:sqlite');const db=new DatabaseSync('/home/node/.n8n/database.sqlite');try{console.log(JSON.stringify(db.prepare('select id from workflow_entity where id in (?,?,?) and activeVersionId is not null').all('novacorpWeeklyDigest','novacorpDigestEmails','novacorpOnboarding')));}finally{db.close();}`));
+ assert.equal(published.length,0,"Depubliez les digests et onboarding avec npm run n8n:digest:stop et npm run n8n:onboarding:stop avant le test.");
  const email="digest-"+suffix+"@novacorp.test";
  const created=await admin.auth.admin.createUser({email,password:randomUUID()+"Aa1!",email_confirm:true});assert.equal(created.error,null);managerId=created.data.user.id;
  assert.equal((await admin.from("profiles").update({role:"manager"}).eq("id",managerId)).error,null);

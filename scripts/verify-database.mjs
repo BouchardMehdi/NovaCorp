@@ -135,6 +135,13 @@ try {
   }));
   assert.deepEqual(digests.sort(),[0,1]);
   console.log("Concurrence : un seul digest par manager et semaine.");
+  const onboardings=await Promise.all([1,2].map(async()=>{
+    const {stdout}=await execAsync("docker",[...psql,"-At","-c",
+      "begin; set local role service_role; select public.claim_employee_onboarding('12000000-0000-0000-0000-000000000001'); select pg_sleep(0.3); commit;"],{encoding:"utf8",timeout:15000});
+    return JSON.parse(stdout.split(/\r?\n/).find(line=>line.startsWith("{"))).claimed;
+  }));
+  assert.equal(onboardings.filter(Boolean).length,1);
+  console.log("Concurrence : une seule reservation du message de bienvenue.");
 } catch (error) {
   console.error(error.stderr || error.message);
   process.exitCode = 1;

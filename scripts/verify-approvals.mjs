@@ -61,8 +61,8 @@ const notify=async(id,kind)=>{
  assert.ok(mail.Content.Body.includes(id));return mail;
 };
 try{
- const published=inside(container(),"const {DatabaseSync}=require(\"node:sqlite\");const db=new DatabaseSync(\"/home/node/.n8n/database.sqlite\");try{console.log(JSON.stringify(db.prepare(\"SELECT id FROM workflow_entity WHERE id IN (?,?,?,?,?,?,?,?) AND activeVersionId IS NOT NULL\").all(\"novacorpQualification\",\"novacorpManagerEmails\",\"novacorpApprovals\",\"novacorpNotifications\",\"novacorpReminders\",\"novacorpManagerReminders\",\"novacorpWeeklyDigest\",\"novacorpDigestEmails\")));}finally{db.close();}");
- assert.equal(JSON.parse(published).length,0,"Dépubliez qualification, validations, supervision et digests avant ce test.");
+ const published=inside(container(),"const {DatabaseSync}=require(\"node:sqlite\");const db=new DatabaseSync(\"/home/node/.n8n/database.sqlite\");try{console.log(JSON.stringify(db.prepare(\"SELECT id FROM workflow_entity WHERE id IN (?,?,?,?,?,?,?,?,?) AND activeVersionId IS NOT NULL\").all(\"novacorpQualification\",\"novacorpManagerEmails\",\"novacorpApprovals\",\"novacorpNotifications\",\"novacorpReminders\",\"novacorpManagerReminders\",\"novacorpWeeklyDigest\",\"novacorpDigestEmails\",\"novacorpOnboarding\")));}finally{db.close();}");
+ assert.equal(JSON.parse(published).length,0,"Dépubliez qualification, validations, supervision, digests et onboarding avant ce test.");
  const email="approvals-"+suffix+"@novacorp.test";
  const created=await admin.auth.admin.createUser({email,password:"QualificationDemo2026!",email_confirm:true});
  assert.equal(created.error,null);userId=created.data.user.id;
