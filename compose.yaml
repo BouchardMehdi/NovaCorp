@@ -9,6 +9,8 @@ services:
   n8n:
     image: docker.n8n.io/n8nio/n8n:2.42.5
     profiles: ["automation"]
+    # Laisser n8n terminer avant que Docker envoie SIGKILL.
+    stop_grace_period: 270s
     ports:
       - "127.0.0.1:5678:5678"
     env_file:
@@ -28,6 +30,8 @@ services:
       N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
       N8N_PERSONALIZATION_ENABLED: "false"
       N8N_BLOCK_ENV_ACCESS_IN_NODE: "true"
+      # Les workflows métier ont une limite de 240 s.
+      N8N_GRACEFUL_SHUTDOWN_TIMEOUT: "250"
       EXECUTIONS_DATA_PRUNE: "true"
       EXECUTIONS_DATA_MAX_AGE: "168"
     volumes:

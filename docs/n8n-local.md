@@ -58,3 +58,15 @@ Références officielles : [Docker Compose n8n](https://docs.n8n.io/deploy/host-
 Depuis l’installation du circuit de validation, `n8n:qualification:start` publie uniquement la qualification. Les emails de tous les validateurs et du salarié sont activés par `npm run n8n:approvals:start`. Dépublier aussi ces workflows avec `npm run n8n:approvals:stop` avant les tests d’intégration et navigateur.
 
 La supervision des délais est activée par `npm run n8n:reminders:start`. La dépublier également avec `npm run n8n:reminders:stop` avant les tests d’intégration ou navigateur, puis la réactiver après les vérifications.
+
+## Arrêt propre et anciennes erreurs
+
+Les workflows métier ont une limite de 240 secondes. La variable `N8N_GRACEFUL_SHUTDOWN_TIMEOUT=250` laisse n8n terminer ses exécutions pendant un arrêt ; `stop_grace_period: 270s` laisse à Docker une marge supplémentaire avant SIGKILL. Le helper des scripts attend au maximum 360 secondes pour une commande Docker, afin de couvrir cet arrêt et le démarrage. Un arrêt ou redémarrage peut donc prendre plusieurs minutes lorsqu’un traitement est en cours.
+
+Appliquer un changement de configuration avec `npm run n8n:start` : un simple `docker compose restart` ne recharge pas les variables d’environnement. Pour la première application sur un ancien conteneur, utiliser `docker compose --profile automation stop --timeout 270 n8n` avant de relancer. Le volume persistant est conservé.
+
+L’ancien workflow **NovaCorp - Notifications manager** reste dépublié ; les envois manager, RH, DRH et salarié passent désormais par **NovaCorp - Notifications RH et salarié**. Une exécution historique marquée `crashed` reste dans la liste des erreurs jusqu’à sa purge normale. Ne pas relancer l’ancien workflow pour effacer cette trace. Le message de n8n évoquant un manque de mémoire est générique : il ne suffit pas à diagnostiquer un OOM.
+
+Ces délais protègent les arrêts demandés à Docker ; ils ne peuvent pas empêcher une coupure brutale de Docker Desktop ou de la machine.
+
+Références : [arrêt n8n](https://docs.n8n.io/hosting/configuration/environment-variables/deployment/), [délai d’arrêt Docker Compose](https://docs.docker.com/reference/compose-file/services/#stop_grace_period).
