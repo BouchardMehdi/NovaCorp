@@ -194,6 +194,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"manager_weekly_digests": {
+                  Row: {
+                    "approved_count": number,"attempts": number,"body": string,"id": string,"last_error": string | null,"lease_token": string | null,"lease_until": string | null,"manager_id": string,"next_attempt_at": string,"pending_count": number,"provider_message_id": string | null,"received_count": number,"sent_at": string | null,"snapshot_at": string,"status": Database["public"]['Enums']["delivery_status"],"subject": string,"week_start": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "approved_count": number,"attempts"?: number,"body": string,"id"?: string,"last_error"?: string | null,"lease_token"?: string | null,"lease_until"?: string | null,"manager_id": string,"next_attempt_at"?: string,"pending_count": number,"provider_message_id"?: string | null,"received_count": number,"sent_at"?: string | null,"snapshot_at": string,"status"?: Database["public"]['Enums']["delivery_status"],"subject": string,"week_start": string
+                  }
+                  Update: {
+                    "approved_count"?: number,"attempts"?: number,"body"?: string,"id"?: string,"last_error"?: string | null,"lease_token"?: string | null,"lease_until"?: string | null,"manager_id"?: string,"next_attempt_at"?: string,"pending_count"?: number,"provider_message_id"?: string | null,"received_count"?: number,"sent_at"?: string | null,"snapshot_at"?: string,"status"?: Database["public"]['Enums']["delivery_status"],"subject"?: string,"week_start"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "manager_weekly_digests_manager_id_fkey"
+      columns: ["manager_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"notifications": {
                   Row: {
                     "approval_step_id": string | null,"attempts": number,"channel": Database["public"]['Enums']["notification_channel"],"created_at": string,"deduplication_key": string,"event_id": number | null,"id": string,"kind": string,"last_error": string | null,"lease_token": string | null,"lease_until": string | null,"next_attempt_at": string,"provider_message_id": string | null,"recipient_id": string,"request_id": string,"sent_at": string | null,"status": Database["public"]['Enums']["delivery_status"]
@@ -462,6 +482,9 @@ isOneToOne: false
 "claim_hr_qualification":
 { Args: { "p_execution_id": string,"p_model": string,"p_provider": string,"p_request_id"?: string }; Returns: Json
                            },
+"claim_weekly_manager_digest":
+{ Args: { "p_manager_id"?: string }; Returns: Json
+                           },
 "complete_hr_qualification":
 { Args: { "p_input_tokens"?: number,"p_lease_token": string,"p_output_tokens"?: number,"p_result": Json,"p_run_id": string }; Returns: Json
                            },
@@ -493,6 +516,9 @@ isOneToOne: false
 { Args: { "p_lease_token": string,"p_message_id"?: string,"p_notification_id": string,"p_sent": boolean }; Returns: Json
                            },
 "finish_hr_notification_email":
+{ Args: { "p_lease_token": string,"p_message_id"?: string,"p_notification_id": string,"p_sent": boolean }; Returns: Json
+                           },
+"finish_weekly_manager_digest":
 { Args: { "p_lease_token": string,"p_message_id"?: string,"p_notification_id": string,"p_sent": boolean }; Returns: Json
                            },
 "get_hr_dashboard":
@@ -530,6 +556,9 @@ isOneToOne: false
                            },
 "queue_hr_approval_reminders":
 { Args: { "p_now"?: string }; Returns: number
+                           },
+"queue_weekly_manager_digests":
+{ Args: { "p_manager_id"?: string }; Returns: number
                            },
 "submit_hr_request":
 { Args: { "p_request_id": string }; Returns: {

@@ -56,7 +56,12 @@
     "n8n:webhook:verify:public": "node scripts/verify-requests-webhook.mjs --public",
     "n8n:webhook:connect": "node scripts/connect-requests-webhook.mjs",
     "n8n:webhook:disconnect": "node scripts/connect-requests-webhook.mjs --disable",
-    "n8n:webhook:verify:chain": "node scripts/verify-requests-webhook-chain.mjs"
+    "n8n:webhook:verify:chain": "node scripts/verify-requests-webhook-chain.mjs",
+    "n8n:digest:build": "node scripts/build-digest-workflows.mjs",
+    "n8n:digest:install": "npm run n8n:digest:build && node scripts/manage-digest-workflows.mjs install",
+    "n8n:digest:start": "node scripts/manage-digest-workflows.mjs start",
+    "n8n:digest:stop": "node scripts/manage-digest-workflows.mjs stop",
+    "n8n:digest:verify": "node --env-file=.env.local scripts/verify-digest.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

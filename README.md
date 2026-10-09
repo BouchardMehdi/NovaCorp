@@ -10,7 +10,7 @@ Plateforme interne de gestion des demandes RH, réalisée dans le cadre du fil r
 - **n8n local dans Docker** : qualification, circuit de validation et emails via Supabase et MailHog.
 - **Ollama + Qwen3 1.7B dans Docker** : LLM local gratuit appelé par n8n.
 
-L’authentification et le schéma complet de la base RH sont en place : quatre types de demandes, règles de validation versionnées, étapes, historique, soldes de congés, pièces jointes privées, contrôles IA, exécutions n8n, notifications et mesures des délais. Les quatre formulaires et leur suivi sont disponibles : brouillons, soumission, annulation, filtres, vues par rôle et décisions des validateurs. La [qualification n8n avec Ollama](docs/n8n-qualification.md) prépare et active le manager, puis le notifie dans MailHog. Le [circuit de validation n8n](docs/n8n-approvals.md) active ensuite les RH/DRH, finalise après décision humaine et envoie les changements de statut au salarié. Les [rappels quotidiens manager après 48 h et alertes RH à 48 h](docs/n8n-reminders.md) sont planifiées dans n8n. La [supervision RH](docs/hr-dashboard.md) suit les volumes, les retards, les délais et les incidents pour les RH et la DRH. L’[installation locale n8n](docs/n8n-local.md) et ses connexions sont prêtes. Voir le [parcours de l’interface](docs/hr-interface.md).
+L’authentification et le schéma complet de la base RH sont en place : quatre types de demandes, règles de validation versionnées, étapes, historique, soldes de congés, pièces jointes privées, contrôles IA, exécutions n8n, notifications et mesures des délais. Les quatre formulaires et leur suivi sont disponibles : brouillons, soumission, annulation, filtres, vues par rôle et décisions des validateurs. La [qualification n8n avec Ollama](docs/n8n-qualification.md) prépare et active le manager, puis le notifie dans MailHog. Le [circuit de validation n8n](docs/n8n-approvals.md) active ensuite les RH/DRH, finalise après décision humaine et envoie les changements de statut au salarié. Les [rappels quotidiens manager après 48 h et alertes RH à 48 h](docs/n8n-reminders.md) sont planifiées dans n8n. La [supervision RH](docs/hr-dashboard.md) suit les volumes, les retards, les délais et les incidents pour les RH et la DRH. L’[installation locale n8n](docs/n8n-local.md) et ses connexions sont prêtes. Le [digest hebdomadaire manager](docs/n8n-weekly-digest.md) récapitule chaque lundi à 8 h les demandes reçues, finalement approuvées et encore en attente. Voir le [parcours de l’interface](docs/hr-interface.md).
 
 Le [schéma relationnel et les permissions](docs/database-schema.md) décrivent les tables, les opérations et les permissions métier. Les [règles métier validées](docs/business-rules.md) sont actives : seuils DRH, délai de 48 h, rappel manager quotidien à 8 h après plus de 48 h, calcul et réservation des congés. Les validations et les emails sont orchestrés dans n8n ; les rappels manager sont planifiés à 8 h (Paris), les alertes RH chaque minute.
 
@@ -46,6 +46,8 @@ npm run n8n:approvals:install
 npm run n8n:approvals:start
 npm run n8n:reminders:install
 npm run n8n:reminders:start
+npm run n8n:digest:install
+npm run n8n:digest:start
 npm run dev
 ```
 
@@ -118,7 +120,7 @@ Si Supabase n'est pas configuré, la page de connexion présente un message d'in
 
 ## Vérifications
 
-Avec Supabase démarré et les comptes fictifs créés. Si les workflows métier sont publiés, les arrêter avec `npm run n8n:qualification:stop` ainsi que `npm run n8n:approvals:stop` et `npm run n8n:reminders:stop` avant les tests navigateur, puis les reprendre avec `npm run n8n:qualification:start` puis `npm run n8n:approvals:start` et `npm run n8n:reminders:start` :
+Avec Supabase démarré et les comptes fictifs créés. Si les workflows métier sont publiés, les arrêter avec `npm run n8n:qualification:stop` ainsi que `npm run n8n:approvals:stop` et `npm run n8n:reminders:stop` ainsi que `npm run n8n:digest:stop` avant les tests navigateur, puis les reprendre avec `npm run n8n:qualification:start` puis `npm run n8n:approvals:start` et `npm run n8n:reminders:start`, puis `npm run n8n:digest:start` :
 
 ```powershell
 npm run db:lint
@@ -127,6 +129,7 @@ npm run db:verify
 npm run n8n:verify
 npm run n8n:approvals:verify
 npm run n8n:reminders:verify
+npm run n8n:digest:verify
 npm run lint
 npm run typecheck
 npm run build
@@ -182,6 +185,7 @@ docs/n8n-local.md              Installation et connexions n8n
 docs/n8n-qualification.md      Qualification locale avec Ollama
 docs/n8n-approvals.md          Circuit de validation et emails
 docs/n8n-reminders.md          Rappels manager à 8 h et alertes RH 48 h
+docs/n8n-weekly-digest.md      Digest manager chaque lundi à 8 h
 docs/hr-dashboard.md           Indicateurs et supervision RH
 n8n/workflows/                 Workflows exportés sans secrets
 scripts/                       Configuration locale et comptes fictifs
