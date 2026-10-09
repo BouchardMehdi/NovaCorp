@@ -70,6 +70,16 @@ Mot de passe initial commun : **`NovaCorpDemo2026!`**.
 
 Ces identifiants sont réservés aux données fictives locales. Le salarié est rattaché au manager. Le script peut être relancé : il réutilise les comptes existants et met à jour leurs profils, sans réinitialiser leurs mots de passe.
 
+### Jeu de données pour les essais manuels
+
+Après l'initialisation des comptes et des règles métier :
+
+```powershell
+npm run demo:seed
+```
+
+Crée **23 demandes fictives** pour **Emma Laurent** : `demo.salarie@novacorp.test`, mot de passe initial **`NovaCorpDemo2026!`**. Le jeu couvre les quatre types, les différents niveaux de validation, les décisions finales, les relances et les incidents. Une relance conserve les demandes existantes et leur progression. Les comptes habituels sont conservés. Voir les [scénarios et précisions sur les historiques simulés](docs/demo-data.md).
+
 L'inscription publique est désactivée. Les comptes sont créés avec l'API d'administration Supabase et confirmés par le script.
 
 ## Services locaux
