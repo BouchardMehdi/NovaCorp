@@ -4,6 +4,7 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const password = "NovaCorpDemo2026!";
 const accounts = [
+  { email: "manager2@novacorp.test", first_name: "Sofia", last_name: "Moreau", role: "manager" },
   { email: "manager@novacorp.test", first_name: "Alex", last_name: "Martin", role: "manager" },
   { email: "salarie@novacorp.test", first_name: "Camille", last_name: "Durand", role: "employee" },
   { email: "rh@novacorp.test", first_name: "Morgan", last_name: "Petit", role: "hr" },
@@ -46,6 +47,11 @@ async function seed() {
     .update({ manager_id: ids.get("manager@novacorp.test") })
     .eq("id", ids.get("salarie@novacorp.test"));
   if (error) throw error;
+  // Conserver une affectation manuelle existante lors des relances.
+  const { error: managerError } = await supabase.from("profiles")
+    .update({ manager_id: ids.get("manager2@novacorp.test") })
+    .eq("id", ids.get("manager@novacorp.test")).is("manager_id", null);
+  if (managerError) throw managerError;
   console.log("Comptes locaux prêts. Mot de passe de démonstration indiqué dans le README.");
 }
 
