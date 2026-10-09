@@ -61,7 +61,12 @@
     "n8n:digest:install": "npm run n8n:digest:build && node scripts/manage-digest-workflows.mjs install",
     "n8n:digest:start": "node scripts/manage-digest-workflows.mjs start",
     "n8n:digest:stop": "node scripts/manage-digest-workflows.mjs stop",
-    "n8n:digest:verify": "node --env-file=.env.local scripts/verify-digest.mjs"
+    "n8n:digest:verify": "node --env-file=.env.local scripts/verify-digest.mjs",
+    "n8n:onboarding:build": "node scripts/build-onboarding-workflow.mjs",
+    "n8n:onboarding:install": "npm run n8n:onboarding:build && node scripts/manage-onboarding-workflow.mjs install",
+    "n8n:onboarding:start": "node scripts/manage-onboarding-workflow.mjs start",
+    "n8n:onboarding:stop": "node scripts/manage-onboarding-workflow.mjs stop",
+    "n8n:onboarding:verify": "node --env-file=.env.local scripts/verify-onboarding.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
