@@ -495,6 +495,9 @@ isOneToOne: false
 "finish_hr_notification_email":
 { Args: { "p_lease_token": string,"p_message_id"?: string,"p_notification_id": string,"p_sent": boolean }; Returns: Json
                            },
+"get_hr_dashboard":
+{ Args: { "p_request_type"?: string }; Returns: Json
+                           },
 "get_hr_request_checks":
 { Args: { "p_request_id": string }; Returns: Json
                            },

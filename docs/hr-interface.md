@@ -31,3 +31,5 @@ Les emails manager, RH, DRH et de statut salarié sont connectés à MailHog dan
 Les tests RH créent un utilisateur fictif distinct, doté d’un solde propre. Ils simulent la préparation n8n uniquement pour tester les boutons du validateur. Leur nettoyage supprime uniquement les données de cet utilisateur aléatoire, via le conteneur PostgreSQL local `supabase_db_NovaCorp`, sans réinitialiser la base.
 
 La supervision des délais est activée par `npm run n8n:reminders:start`. La dépublier également avec `npm run n8n:reminders:stop` avant les tests d’intégration ou navigateur, puis la réactiver après les vérifications.
+
+La [supervision RH](hr-dashboard.md), réservée aux RH et à la DRH, complète la liste des demandes avec les volumes, délais, retards et incidents d’automatisation.
