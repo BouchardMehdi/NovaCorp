@@ -46,7 +46,8 @@
     "n8n:reminders:install": "npm run n8n:reminders:build && node scripts/install-reminder-workflow.mjs",
     "n8n:reminders:start": "node scripts/start-reminder-workflow.mjs",
     "n8n:reminders:stop": "node scripts/stop-reminder-workflow.mjs",
-    "n8n:reminders:verify": "node --env-file=.env.local scripts/verify-reminders.mjs"
+    "n8n:reminders:verify": "node --env-file=.env.local scripts/verify-reminders.mjs",
+    "demo:seed": "node --env-file=.env.local scripts/seed-demo-data.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
