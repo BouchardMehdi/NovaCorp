@@ -128,6 +128,13 @@ try {
     console.log(hours===24?"Concurrence : aucune relance a 24 h.":"Concurrence : une seule alerte RH après 48 h.");
   }
 
+  const digests=await Promise.all([1,2].map(async()=>{
+    const {stdout}=await execAsync("docker",[...psql,"-At","-c",
+      "begin; select private.queue_weekly_manager_digests((date_trunc('week',now() at time zone 'Europe/Paris')::date+time '08:00') at time zone 'Europe/Paris','12000000-0000-0000-0000-000000000002'); select pg_sleep(0.3); commit;"],{encoding:"utf8",timeout:15000});
+    return Number(stdout.split(/\r?\n/).find(line=>/^\d+$/.test(line)));
+  }));
+  assert.deepEqual(digests.sort(),[0,1]);
+  console.log("Concurrence : un seul digest par manager et semaine.");
 } catch (error) {
   console.error(error.stderr || error.message);
   process.exitCode = 1;
