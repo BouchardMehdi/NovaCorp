@@ -1,7 +1,7 @@
 import {readFile} from "node:fs/promises";
 import {container,inside} from "./n8n-tools.mjs";
 try{
- const workflows=await Promise.all(["reminders"].map(async name=>JSON.parse(await readFile("n8n/workflows/"+name+".json","utf8"))));
+ const workflows=await Promise.all(["reminders","manager-reminders"].map(async name=>JSON.parse(await readFile("n8n/workflows/"+name+".json","utf8"))));
  const result=inside(container(),`
  const fs=require("node:fs"),os=require("node:os"),path=require("node:path"),cp=require("node:child_process");
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),"novacorp-workflows-"));

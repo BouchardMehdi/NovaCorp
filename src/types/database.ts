@@ -522,6 +522,9 @@ isOneToOne: false
         isOneToOne: false
         isSetofReturn: true
       } },
+"queue_daily_manager_reminders":
+{ Args: { "p_request_id"?: string }; Returns: number
+                           },
 "queue_due_hr_reminders":
 { Args: { "p_request_id"?: string }; Returns: number
                            },

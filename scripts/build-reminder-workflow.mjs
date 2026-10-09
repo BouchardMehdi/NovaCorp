@@ -1,6 +1,6 @@
 import {readFile,writeFile} from "node:fs/promises";
 const workflow=JSON.parse(await readFile("n8n/workflows/approvals.json","utf8"));
-workflow.id="novacorpReminders";workflow.name="NovaCorp - Relances 24 h et alertes RH 48 h";
+workflow.id="novacorpReminders";workflow.name="NovaCorp - Alertes RH 48 h";
 const rpc=workflow.nodes.find(node=>node.name==="Avancer le circuit");
 rpc.id="Verifier les echeances";rpc.name=rpc.id;
 rpc.parameters.url="http://supabase_kong_NovaCorp:8000/rest/v1/rpc/queue_due_hr_reminders";
@@ -8,3 +8,14 @@ rpc.parameters.jsonBody="={{ {p_request_id:$json.request_id || null} }}";
 workflow.connections.Configuration.main[0][0].node=rpc.id;
 await writeFile("n8n/workflows/reminders.json",JSON.stringify(workflow,null,2)+"\n");
 console.log("Workflow de supervision généré sans secrets.");
+
+workflow.id="novacorpManagerReminders";
+workflow.name="NovaCorp - Rappel quotidien manager 8 h";
+const timer=workflow.nodes.find(node=>node.type==="n8n-nodes-base.scheduleTrigger");
+delete workflow.connections[timer.name];
+timer.id="Chaque matin a 8 h";timer.name=timer.id;
+workflow.connections[timer.name]={main:[[{node:"Configuration",type:"main",index:0}]]};
+timer.parameters={rule:{interval:[{field:"cronExpression",expression:"0 8 * * *"}]}};
+workflow.settings={...workflow.settings,timezone:"Europe/Paris"};
+rpc.parameters.url="http://supabase_kong_NovaCorp:8000/rest/v1/rpc/queue_daily_manager_reminders";
+await writeFile("n8n/workflows/manager-reminders.json",JSON.stringify(workflow,null,2)+"\n");

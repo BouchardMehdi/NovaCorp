@@ -1,18 +1,16 @@
-# Relances et alertes de délai
+# Rappel quotidien manager et alertes RH
 
-Le workflow **NovaCorp - Relances 24 h et alertes RH 48 h** (`novacorpReminders`) vérifie chaque minute les étapes de validation actives, avec l'heure du serveur Supabase :
+S3 suit la photo : chaque matin à **8 h (Europe/Paris)**, rappeler au manager chaque demande dont sa validation attend depuis **strictement plus de 48 heures**. Le délai commence à l’activation de l’étape manager, après qualification.
 
-- à partir de **24 heures calendaires** après activation, une relance au validateur affecté ;
-- à partir de **48 heures calendaires**, une alerte au RH référent figé à la soumission ;
-- aucune acceptation, aucun refus, aucune activation de l'étape suivante sans décision humaine.
+- `novacorpManagerReminders` : rappel quotidien, cron `0 8 * * *`, fuseau `Europe/Paris`.
+- `novacorpReminders` : alertes RH à 48 h, surveillance chaque minute, une alerte par étape manager/RH/DRH.
+- Les relances à 24 h sont supprimées pour tous les validateurs. Les anciens messages restent dans l’historique ; ceux encore en attente sont abandonnés à la réservation SMTP.
 
-Chaque étape manager, RH ou DRH a son propre délai. Les règles et les référents restent ceux de la demande. Une relance et une alerte au maximum sont créées par étape, grâce aux clés de déduplication. Plusieurs exécutions concurrentes ou un redémarrage ne créent pas d'autres messages.
+Un rappel maximum par étape et par date de Paris, renouvelable chaque jour jusqu’à décision, grâce à la clé `step:<id>:manager-daily:YYYY-MM-DD:email`. Aucune décision ni transition automatique à l’échéance.
 
-Si la supervision reprend après 48 heures, elle crée directement l'alerte ; elle n'ajoute pas une relance de 24 heures périmée. Si une relance déjà créée n'est pas encore envoyée à l'échéance, le workflow de notifications l'abandonne au profit de l'alerte.
+Le seuil est calculé à 8 h : exactement 48 h ne suffit pas. Un lancement manuel plus tard conserve ce seuil. Aucun rappel avant 8 h. Les changements d’heure sont pris en compte ; 48 h signifie 48 heures écoulées.
 
 ## Installation
-
-Avec Supabase, n8n et le circuit de validation configurés :
 
 ```powershell
 npm run db:migrate
@@ -20,34 +18,25 @@ npm run n8n:reminders:install
 npm run n8n:reminders:start
 ```
 
-Le workflow de notifications existant (`novacorpNotifications`) envoie aussi ces messages dans MailHog. Il doit être publié avec `npm run n8n:approvals:start`. Aucun nouveau conteneur ni appel LLM.
+Ces commandes gèrent les deux workflows. Le redémarrage conserve la configuration du conteneur n8n, notamment ngrok. Supabase reste local. Aucun conteneur ni appel LLM supplémentaire.
 
-La RPC `queue_due_hr_reminders(uuid)` n'accepte pas d'heure fournie par n8n : elle utilise `now()`. Son paramètre facultatif de demande sert aux vérifications ciblées. L'ancienne RPC `queue_hr_approval_reminders(timestamptz)` conserve son contrat pour les tests et outils backend. Leur implémentation privée verrouille d'abord les demandes, puis leurs étapes, et crée les notifications dans une seule transaction. La nouvelle RPC est réservée à `service_role`.
+Les RPC `queue_daily_manager_reminders(uuid)` et `queue_due_hr_reminders(uuid)` sont réservées à `service_role`, utilisent l’heure Supabase et acceptent un identifiant facultatif pour les tests ciblés. L’ancienne RPC backend `queue_hr_approval_reminders(timestamptz)` ne crée plus que les alertes RH ; le champ historique `approval_rules.reminder_hours` ne pilote plus les rappels.
 
-Les emails reprennent la référence, le titre, l'étape et l'échéance à l'heure de Paris. Les alertes passent avant les relances, puis les autres emails. Le workflow d'envoi réserve au plus un email par minute : la réception peut donc être retardée par la file. Les décisions et le statut sont revérifiés lors de la réservation ; une étape décidée, une demande annulée ou finale ne reçoit plus de nouvelle relance ou alerte. Une décision pendant un envoi SMTP déjà commencé peut toutefois arriver après cette vérification.
+Le workflow existant `novacorpNotifications` envoie dans MailHog au plus un email par minute, avec priorité aux alertes : **8 h est l’heure de mise en file**, la livraison peut être retardée. Docker et n8n doivent tourner à 8 h ; aucune reprise automatique des journées manquées n’est ajoutée.
 
-Les réservations et reprises SMTP conservent les mêmes règles : cinq minutes de réservation, jetons, temporisation et cinq tentatives maximum. SMTP peut produire un doublon si le message est reçu avant une interruption de l'acquittement en base. Les notifications créées en base restent uniques.
+Lors de la réservation SMTP, la base revérifie la demande, l’étape, le destinataire, le seuil et la date. Les rappels d’un jour précédent et les étapes décidées/demandes clôturées ne sont plus envoyés. Une décision pendant un envoi SMTP déjà commencé peut arriver après cette vérification.
+
+Les reprises SMTP restent limitées à cinq tentatives, avec réservation de cinq minutes et jeton. Une interruption après réception SMTP mais avant acquittement en base peut provoquer une nouvelle livraison ; la notification en base reste unique. La supervision RH inclut les incidents des rappels du jour.
 
 ## Vérifications
 
+Dépublier les workflows métier avant les tests d’intégration puis les republier, comme indiqué dans le README.
+
 ```powershell
-npm run n8n:qualification:stop
-npm run n8n:approvals:stop
-npm run n8n:reminders:stop
 npm run db:verify
 npm run n8n:reminders:verify
 ```
 
-Les tests SQL vérifient les instants avant/à 24 h et 48 h, les destinataires, la déduplication, la priorité, les reprises SMTP, l'indépendance des délais et l'annulation. La reconstruction vérifie aussi deux planifications concurrentes.
+Les tests SQL couvrent 8 h, le seuil strict, les changements d’heure, le rejeu quotidien, le destinataire, l’arrêt après décision et l’exclusion des étapes RH, ainsi que les alertes RH.
 
-Le test n8n exécute réellement la supervision et les envois dans MailHog. Il utilise une demande fictive dédiée et simule ses horodatages dans une session PostgreSQL, sans désactiver les triggers des autres sessions ni modifier les demandes existantes. La qualification est une fixture SQL. Il vérifie les destinataires manager et RH, les messages, les rejeux, le délai RH distinct et une alerte annulée avant envoi. Ses comptes, demandes et workflows temporaires sont nettoyés.
-
-Pour reprendre après les vérifications :
-
-```powershell
-npm run n8n:qualification:start
-npm run n8n:approvals:start
-npm run n8n:reminders:start
-```
-
-Un simple arrêt de Docker ou n8n conserve les publications et les volumes. Au redémarrage, la supervision reprend sur les étapes encore actives.
+Le test n8n utilise uniquement un compte et une demande fictifs dédiés, simule leurs horodatages, vérifie les emails manager/RH dans MailHog, les rejeux et l’annulation, puis nettoie ses fixtures. Avant 8 h, il vérifie l’absence de rappel ; l’envoi SMTP du rappel quotidien est testé à partir de 8 h. Les tests SQL déterministes restent indépendants de l’heure d’exécution.

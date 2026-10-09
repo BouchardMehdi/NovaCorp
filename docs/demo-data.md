@@ -32,7 +32,7 @@ Les 23 demandes portent le préfixe **[Démo]**.
 | Annulée | 1 | Télétravail |
 | Qualification en échec | 1 | Équipement, trois tentatives fictives épuisées |
 | Validation RH en retard | 1 | Équipement, délai de 48 h dépassé, échec SMTP fictif |
-| Relances à 24 h | 2 | Manager et DRH |
+| Anciennes fixtures de relance à 24 h | 2 | Manager et DRH ; ne déclenchent plus de rappel à 24 h depuis l'alignement S3 |
 
 Les périodes commencent l'année suivante, à partir de son premier lundi, et ne se chevauchent pas. À la première création en 2026, elles se situent donc en 2027. Le compte reçoit un solde initial de 25 jours pour l'année courante et la suivante, sans écraser un solde existant. Les scénarios réservent initialement 15 jours et consomment 2 jours.
 

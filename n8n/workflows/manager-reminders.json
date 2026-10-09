@@ -1,6 +1,6 @@
 {
-  "id": "novacorpReminders",
-  "name": "NovaCorp - Alertes RH 48 h",
+  "id": "novacorpManagerReminders",
+  "name": "NovaCorp - Rappel quotidien manager 8 h",
   "active": false,
   "nodes": [
     {
@@ -15,16 +15,16 @@
       ]
     },
     {
-      "id": "Toutes les minutes",
-      "name": "Toutes les minutes",
+      "id": "Chaque matin a 8 h",
+      "name": "Chaque matin a 8 h",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "parameters": {
         "rule": {
           "interval": [
             {
-              "field": "minutes",
-              "minutesInterval": 1
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
             }
           ]
         }
@@ -64,7 +64,7 @@
       "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
-        "url": "http://supabase_kong_NovaCorp:8000/rest/v1/rpc/queue_due_hr_reminders",
+        "url": "http://supabase_kong_NovaCorp:8000/rest/v1/rpc/queue_daily_manager_reminders",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -98,22 +98,22 @@
         ]
       ]
     },
-    "Toutes les minutes": {
+    "Configuration": {
       "main": [
         [
           {
-            "node": "Configuration",
+            "node": "Verifier les echeances",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Configuration": {
+    "Chaque matin a 8 h": {
       "main": [
         [
           {
-            "node": "Verifier les echeances",
+            "node": "Configuration",
             "type": "main",
             "index": 0
           }

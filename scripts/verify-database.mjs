@@ -89,7 +89,16 @@ try {
   assert.equal(qualifications.filter(Boolean).length,1);
   console.log("Concurrence : une seule exécution n8n réserve la qualification.");
 
-  sql("set role service_role; select complete_hr_qualification(id,lease_token,'{\"qualification\":\"eligible\",\"summary\":\"Fixture concurrence\",\"response_draft\":\"Attente\"}') from workflow_runs where request_id='22000000-0000-0000-0000-000000000005' and status='running'; reset role; set role authenticated; set request.jwt.claims='{\"sub\":\"12000000-0000-0000-0000-000000000002\",\"role\":\"authenticated\"}'; select decide_hr_approval(id,true) from approval_steps where request_id='22000000-0000-0000-0000-000000000005' and position=1;");
+  sql("set role service_role; select complete_hr_qualification(id,lease_token,'{\"qualification\":\"eligible\",\"summary\":\"Fixture concurrence\",\"response_draft\":\"Attente\"}') from workflow_runs where request_id='22000000-0000-0000-0000-000000000005' and status='running';");
+  sql("begin; set local session_replication_role='replica'; update approval_steps set activated_at='2026-10-07 07:00 Europe/Paris',due_at='2026-10-09 07:00 Europe/Paris' where request_id='22000000-0000-0000-0000-000000000005' and position=1; commit;");
+  const dailyReminders=await Promise.all([1,2].map(async()=>{
+    const {stdout}=await execAsync("docker",[...psql,"-At","-c",
+      "begin; select private.queue_daily_manager_reminders('2026-10-09 08:00 Europe/Paris','22000000-0000-0000-0000-000000000005'); select pg_sleep(0.3); commit;"],{encoding:"utf8",timeout:15000});
+    return Number(stdout.split(/\r?\n/).find(line=>/^\d+$/.test(line)));
+  }));
+  assert.deepEqual(dailyReminders.sort(),[0,1]);
+  console.log("Concurrence : un seul rappel quotidien manager.");
+  sql("set role authenticated; set request.jwt.claims='{\"sub\":\"12000000-0000-0000-0000-000000000002\",\"role\":\"authenticated\"}'; select decide_hr_approval(id,true) from approval_steps where request_id='22000000-0000-0000-0000-000000000005' and position=1;");
   const advances=await Promise.all(["advance-a","advance-b"].map(async execution=>{
     const {stdout}=await execAsync("docker",[...psql,"-At","-c",
       "begin; set local role service_role; select advance_hr_approvals('"+execution+"','22000000-0000-0000-0000-000000000005'); select pg_sleep(0.3); commit;"],{encoding:"utf8",timeout:15000});
@@ -115,8 +124,8 @@ try {
         "begin; set local role service_role; select queue_due_hr_reminders('22000000-0000-0000-0000-000000000005'); select pg_sleep(0.3); commit;"],{encoding:"utf8",timeout:15000});
       return Number(stdout.split(/\r?\n/).find(line=>/^\d+$/.test(line)));
     }));
-    assert.deepEqual(queued.sort(),[0,1]);
-    console.log("Concurrence : une seule "+(hours===24?"relance à 24 h":"alerte RH après 48 h")+".");
+    assert.deepEqual(queued.sort(),hours===24?[0,0]:[0,1]);
+    console.log(hours===24?"Concurrence : aucune relance a 24 h.":"Concurrence : une seule alerte RH après 48 h.");
   }
 
 } catch (error) {

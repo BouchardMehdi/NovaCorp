@@ -13,7 +13,7 @@ Ces règles sont les choix de l'équipe pour NovaCorp. Le PDF impose les quatre 
 
 Au seuil exact, le DRH n'intervient pas. Un refus motivé met fin au circuit. Un accord permet à n8n d'activer l'étape suivante. La qualification IA ne constitue pas une décision d'approbation.
 
-La migration crée une nouvelle version active des quatre circuits, avec 48 heures de décision et 24 heures avant relance. Les versions antérieures sont désactivées, leurs paramètres conservés. Les demandes déjà soumises gardent leurs règles.
+La migration crée une nouvelle version active des quatre circuits, avec 48 heures de décision. Le champ historique de relance à 24 heures est conservé mais ne pilote plus S3. Les versions antérieures sont désactivées, leurs paramètres conservés. Les demandes déjà soumises gardent leurs règles.
 
 ## Affectation des validateurs
 
@@ -89,14 +89,14 @@ n8n pourra transmettre ce résultat au LLM pour produire la synthèse du validat
 
 Le délai commence quand n8n active une étape en `pending`. La base produit `activated_at` et `due_at`.
 
-- **24 heures calendaires** : une relance au validateur encore en attente.
+- **Chaque matin à 8 h (Europe/Paris)** : rappel au manager dont la validation attend depuis strictement plus de 48 heures. Un rappel par étape et par jour, jusqu’à décision.
 - **48 heures calendaires** : une alerte au RH référent si l'étape reste en attente.
 - Aucun accord, refus ou passage à l'étape suivante n'est automatique à l'expiration.
 - Le week-end compte dans ces délais ; une nouvelle étape bénéficie de ses propres 48 heures.
 
-Le backend appellera périodiquement `queue_hr_approval_reminders()`. Cette opération crée les notifications en file et évite les doublons. Le paramètre facultatif `p_now` permet des tests aux frontières ; en exploitation, utiliser l'heure réelle par défaut.
+Le backend appelle `queue_due_hr_reminders()` chaque minute pour les alertes RH, et `queue_daily_manager_reminders()` chaque matin à 8 h pour les rappels manager. Ces opérations utilisent l'heure serveur, créent les notifications en file et évitent les doublons.
 
-Si le premier passage du superviseur survient après l'échéance, il crée directement l'alerte RH, sans ajouter une relance déjà périmée. Une demande clôturée n'engendre plus de relances. Lors de la réservation d'un email, n8n vérifie en base que la demande et l'étape sont encore actives, y compris pour une notification déjà mise en file.
+Les alertes RH restent uniques par étape ; les rappels manager sont quotidiens et indépendants. Les anciennes relances à 24 h ne sont plus envoyées. Une demande clôturée n'engendre plus de relances. Lors de la réservation d'un email, n8n vérifie en base que la demande et l'étape sont encore actives, y compris pour une notification déjà mise en file.
 
 Ces opérations ne démarrent pas de planificateur et n'envoient pas d'email à elles seules. L'envoi MailHog et la planification périodique seront branchés dans n8n.
 
