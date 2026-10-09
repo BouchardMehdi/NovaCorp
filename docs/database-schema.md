@@ -75,7 +75,7 @@ erDiagram
 |---|---|
 | `profiles` | Identité métier reliée à Auth, rôle et manager. Pas de mot de passe ni de duplication d'email. |
 | `request_types` | Congés (`leave`), télétravail (`remote_work`), matériel (`equipment`), formation (`training`). |
-| `approval_rules` | Circuit versionné par type, seuils DRH, délai de décision et intervalle de relance. |
+| `approval_rules` | Circuit versionné par type, seuils DRH, délai de décision et ancien intervalle de relance (historique). |
 | `requests` | Demande, champs typés, manager et règle capturés lors de la soumission, horodatages. |
 | `approval_steps` | Manager, RH puis DRH si nécessaire ; affectation, échéance, décision et commentaire. |
 | `request_events` | Créations, modifications de brouillon, changements de statut et décisions. |
@@ -108,7 +108,7 @@ Le calendrier de démonstration compte lundi-vendredi, sans exclusion des jours 
 
 ## Circuits configurables
 
-Les circuits sont maintenant **actifs**, selon les [règles métier validées](business-rules.md) : manager puis RH ; DRH au-delà de 10 jours de congés, de 1 000 EUR de matériel ou de 1 500 EUR de formation. Télétravail sans DRH. Délai : 48 heures calendaires ; relance : 24 heures.
+Les circuits sont maintenant **actifs**, selon les [règles métier validées](business-rules.md) : manager puis RH ; DRH au-delà de 10 jours de congés, de 1 000 EUR de matériel ou de 1 500 EUR de formation. Télétravail sans DRH. Délai : 48 heures calendaires ; rappel manager chaque matin à 8 h (Paris) après strictement plus de 48 h.
 
 Une seule version est active par type. Après sa première utilisation, ses paramètres sont figés ; elle peut uniquement être désactivée. Pour changer un circuit, créer une nouvelle version. Les demandes déjà soumises conservent leur règle, leur manager et leurs référents RH/DRH.
 
@@ -192,7 +192,7 @@ Le contenu est téléchargeable uniquement par les lecteurs autorisés de la dem
 5. Passer à `pending_approval`, puis activer le manager (`pending`). La base fixe l'échéance et met sa notification en file.
 6. À chaque décision utilisateur, activer l'étape suivante après l'accord précédent. Après un refus, terminer en `rejected` ; après tous les accords, terminer en `approved`. Pour les congés, la base effectue automatiquement le mouvement du solde dans la transaction du changement de statut.
 7. Traiter les notifications en file, envoyer les emails vers MailHog (`mailhog:1025`) ou Slack, puis enregistrer le résultat d'envoi.
-8. Appeler périodiquement `queue_hr_approval_reminders` pour les relances à 24 h et alertes RH à 48 h ; vérifier que la demande et l’étape sont encore actives avant chaque envoi.
+8. Appeler `queue_due_hr_reminders` chaque minute pour les alertes RH à 48 h, et `queue_daily_manager_reminders` chaque matin à 8 h (Paris) pour les rappels manager après plus de 48 h ; vérifier que la demande et l’étape sont encore actives avant chaque envoi.
 
 Chaque changement de statut crée automatiquement une notification au demandeur. L'activation d'une étape crée une notification au validateur. Les clés de déduplication évitent de créer plusieurs lignes pour le même événement ; n8n devra encore gérer la prise en charge exclusive des jobs et les reprises SMTP. Une clé unique ne garantit pas à elle seule un envoi externe exactement une fois.
 

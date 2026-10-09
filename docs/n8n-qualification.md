@@ -90,7 +90,7 @@ npm run llm:stop
 
 Pour reprendre, démarrer Ollama, puis republier les workflows avec `n8n:qualification:start`. Les poids du modèle sont conservés ; pas besoin de les télécharger à nouveau.
 
-Le [circuit de validation](n8n-approvals.md) assure désormais l’avancement manager → RH → DRH et la finalisation après leurs décisions. Les [relances à 24 h et alertes à 48 h](n8n-reminders.md) sont planifiées dans n8n.
+Le [circuit de validation](n8n-approvals.md) assure désormais l’avancement manager → RH → DRH et la finalisation après leurs décisions. Les [rappels quotidiens manager et alertes à 48 h](n8n-reminders.md) sont planifiées dans n8n.
 
 Depuis l’installation du circuit de validation, `n8n:qualification:start` publie uniquement la qualification. Les emails de tous les validateurs et du salarié sont activés par `npm run n8n:approvals:start`. Dépublier aussi ces workflows avec `npm run n8n:approvals:stop` avant les tests d’intégration et navigateur.
 

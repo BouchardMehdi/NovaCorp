@@ -8,13 +8,13 @@ if(!url||!["localhost","127.0.0.1","[::1]"].includes(new URL(url).hostname))thro
 const admin=createClient(url,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
 const user=createClient(url,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
 const suffix=randomUUID().slice(0,8);
-const workflowIds=["reminderTest"+suffix,"reminderMailTest"+suffix];
+const workflowIds=["reminderTest"+suffix,"reminderMailTest"+suffix,"dailyReminderTest"+suffix];
 let userId;
 async function execute(workflowName,id,requestId,model){
  const workflow=JSON.parse(await readFile("n8n/workflows/"+workflowName+".json","utf8"));
  workflow.id=id;workflow.name="TEST NovaCorp "+id;workflow.active=false;
+ for(const node of workflow.nodes.filter(node=>node.type==="n8n-nodes-base.scheduleTrigger"))delete workflow.connections[node.name];
  workflow.nodes=workflow.nodes.filter(node=>node.type!=="n8n-nodes-base.scheduleTrigger");
- delete workflow.connections["Toutes les minutes"];
  const assignments=workflow.nodes.find(node=>node.name==="Configuration").parameters.assignments.assignments;
  assignments.find(field=>field.name==="request_id").value=requestId;
  if(model)assignments.find(field=>field.name==="model").value=model;
@@ -68,7 +68,7 @@ const age=(id,position,hours)=>{
 };
 const supervise=async id=>assert.equal(await execute("reminders",workflowIds[0],id),"success");
 try{
- assert.equal(JSON.parse(inside(container(),"const {DatabaseSync}=require(\"node:sqlite\");const db=new DatabaseSync(\"/home/node/.n8n/database.sqlite\");try{console.log(JSON.stringify(db.prepare(\"SELECT id FROM workflow_entity WHERE id IN (?,?,?,?,?) AND activeVersionId IS NOT NULL\").all(\"novacorpQualification\",\"novacorpManagerEmails\",\"novacorpApprovals\",\"novacorpNotifications\",\"novacorpReminders\")));}finally{db.close();}")).length,0,"Dépubliez qualification, validations et supervision avant ce test.");
+ assert.equal(JSON.parse(inside(container(),"const {DatabaseSync}=require(\"node:sqlite\");const db=new DatabaseSync(\"/home/node/.n8n/database.sqlite\");try{console.log(JSON.stringify(db.prepare(\"SELECT id FROM workflow_entity WHERE id IN (?,?,?,?,?,?) AND activeVersionId IS NOT NULL\").all(\"novacorpQualification\",\"novacorpManagerEmails\",\"novacorpApprovals\",\"novacorpNotifications\",\"novacorpReminders\",\"novacorpManagerReminders\")));}finally{db.close();}")).length,0,"Dépubliez qualification, validations et supervision avant ce test.");
  const email="reminders-"+suffix+"@novacorp.test";
  const created=await admin.auth.admin.createUser({email,password:"QualificationDemo2026!",email_confirm:true});
  assert.equal(created.error,null);userId=created.data.user.id;
@@ -80,17 +80,27 @@ try{
  assert.equal((await user.rpc("submit_hr_request",{p_request_id:id})).error,null);await qualify(id);
  await supervise(id);
  assert.equal((await get("notifications",id)).filter(n=>["reminder","overdue_alert"].includes(n.kind)).length,0);
- console.log("OK supervision : aucun rappel avant 24 h.");
+ console.log("OK supervision : aucune relance immediate.");
+
  age(id,1,24);await supervise(id);
- const reminders=(await get("notifications",id)).filter(n=>n.kind==="reminder");assert.equal(reminders.length,1);
- const managerMail=await notify(id,"reminder");assert.ok(managerMail.Content.Body.includes("24 heures"));
- const managerUser=await admin.auth.admin.getUserById(manager.id);assert.equal(managerUser.error,null);
- assert.ok(JSON.stringify(managerMail.Content.Headers.To).includes(managerUser.data.user.email));
- await supervise(id);
- assert.equal((await get("notifications",id)).filter(n=>n.kind==="reminder").length,1);
- const before=(await messages()).length;
- assert.equal(await execute("notifications",workflowIds[1],id),"success");assert.equal((await messages()).length,before);
- console.log("OK 24 h : email au manager, supervision rejouée sans doublon.");
+ assert.equal((await get("notifications",id)).filter(n=>n.kind==="reminder").length,0);
+ console.log("OK : aucune relance a 24 h.");
+ // Viser le seuil de 8 h Paris, pas l'heure courante du lancement du test.
+ const parisDay=sql("select (now() at time zone 'Europe/Paris')::date;").trim();
+ const afterEight=sql("select (now() at time zone 'Europe/Paris')::time>=time '08:00';").trim()==="t";
+ sql("begin;set local session_replication_role='replica';update public.approval_steps set activated_at=('"+parisDay+" 08:00 Europe/Paris')::timestamptz-interval '49 hours',due_at=('"+parisDay+" 08:00 Europe/Paris')::timestamptz-interval '1 hour' where request_id='"+id+"' and position=1;commit;");
+ assert.equal(await execute("manager-reminders",workflowIds[2],id),"success");
+ assert.equal((await get("notifications",id)).filter(n=>n.kind==="reminder").length,afterEight?1:0);
+ if(afterEight){
+  const managerMail=await notify(id,"reminder");assert.ok(managerMail.Content.Body.includes("plus de 48 heures"));
+  const managerUser=await admin.auth.admin.getUserById(manager.id);assert.equal(managerUser.error,null);
+  assert.ok(JSON.stringify(managerMail.Content.Headers.To).includes(managerUser.data.user.email));
+  assert.equal(await execute("manager-reminders",workflowIds[2],id),"success");
+  assert.equal((await get("notifications",id)).filter(n=>n.kind==="reminder").length,1);
+  const before=(await messages()).length;
+  assert.equal(await execute("notifications",workflowIds[1],id),"success");assert.equal((await messages()).length,before);
+  console.log("OK rappel quotidien : email au manager, rejeu sans doublon.");
+ }else console.log("OK avant 8 h : aucun rappel ; envoi quotidien couvert par les tests SQL.");
  age(id,1,49);await supervise(id);
  const step=(await get("approval_steps",id)).find(s=>s.position===1);assert.equal(step.status,"pending");
  const alert=await notify(id,"overdue_alert");assert.ok(alert.Content.Body.includes("48 heures"));assert.ok(alert.Content.Body.includes("Aucune décision automatique"));
@@ -101,10 +111,10 @@ try{
  console.log("OK 48 h : email au RH référent et aucune décision automatique.");
  await decide(id,1,true);
  const advanced=await admin.rpc("advance_hr_approvals",{p_execution_id:"reminders-advance-"+suffix,p_request_id:id});assert.equal(advanced.error,null);assert.equal(advanced.data.action,"activate_hr");
- await supervise(id);assert.equal((await get("notifications",id)).filter(n=>n.kind==="reminder").length,1);
+ await supervise(id);assert.equal((await get("notifications",id)).filter(n=>n.kind==="reminder").length,afterEight?1:0);
  age(id,2,24);await supervise(id);
- const rhMail=await notify(id,"reminder");assert.ok(rhMail.Content.Body.includes("(RH)"));
- assert.ok(JSON.stringify(rhMail.Content.Headers.To).includes(hrUser.data.user.email));
+ assert.equal(await execute("manager-reminders",workflowIds[2],id),"success");
+ assert.equal((await get("notifications",id)).filter(n=>n.kind==="reminder").length,afterEight?1:0);
  age(id,2,49);await supervise(id);
  assert.equal((await user.rpc("cancel_hr_request",{p_request_id:id})).error,null);
  for(const n of await get("notifications",id))if(n.status==="queued"&&n.kind==="status_change")
@@ -113,7 +123,7 @@ try{
  assert.equal(await execute("notifications",workflowIds[1],id),"success");assert.equal((await messages()).length,afterCancel);
  await supervise(id);
  assert.equal((await admin.from("requests").select("status").eq("id",id).single()).data.status,"cancelled");
- console.log("OK étape RH : délai indépendant, relance RH, alerte annulée non envoyée.");
+ console.log("OK étape RH : délai indépendant, aucun rappel quotidien RH, alerte annulée non envoyée.");
 }catch(error){
  console.error("Vérification relances échouée :",error.message);
  process.exitCode=1;

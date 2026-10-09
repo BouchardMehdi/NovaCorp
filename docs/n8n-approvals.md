@@ -49,6 +49,6 @@ npm run n8n:qualification:start
 npm run n8n:approvals:start
 ```
 
-Les [relances à 24 h et alertes RH à 48 h](n8n-reminders.md) sont désormais planifiées ; aucune échéance ne produit une décision automatique.
+Les [rappels quotidiens manager après 48 h et alertes RH à 48 h](n8n-reminders.md) sont désormais planifiées ; aucune échéance ne produit une décision automatique.
 
 La supervision des délais est activée par `npm run n8n:reminders:start`. La dépublier également avec `npm run n8n:reminders:stop` avant les tests d’intégration ou navigateur, puis la réactiver après les vérifications.

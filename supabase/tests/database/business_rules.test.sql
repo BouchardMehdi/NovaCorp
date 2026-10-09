@@ -99,7 +99,7 @@ select queue_hr_approval_reminders((select activated_at+interval '23 hours' from
 select is((select count(*)::integer from notifications where request_id='21000000-0000-0000-0000-000000000009' and kind='reminder'),0,'pas de relance avant 24 heures');
 select queue_hr_approval_reminders((select activated_at+interval '24 hours' from approval_steps where request_id='21000000-0000-0000-0000-000000000009' and position=1));
 select queue_hr_approval_reminders((select activated_at+interval '24 hours' from approval_steps where request_id='21000000-0000-0000-0000-000000000009' and position=1));
-select is((select count(*)::integer from notifications where request_id='21000000-0000-0000-0000-000000000009' and kind='reminder'),1,'relance à 24 heures dédupliquée');
+select is((select count(*)::integer from notifications where request_id='21000000-0000-0000-0000-000000000009' and kind='reminder'),0,'ancienne relance a 24 heures supprimee');
 select queue_hr_approval_reminders((select due_at from approval_steps where request_id='21000000-0000-0000-0000-000000000009' and position=1));
 select queue_hr_approval_reminders((select due_at+interval '1 hour' from approval_steps where request_id='21000000-0000-0000-0000-000000000009' and position=1));
 select is((select count(*)::integer from notifications where request_id='21000000-0000-0000-0000-000000000009' and kind='overdue_alert'),1,'alerte RH à 48 heures dédupliquée');
@@ -130,7 +130,7 @@ select is((select consumed_days from leave_balances where employee_id='11000000-
 select is((select consumed_days from leave_balances where employee_id='11000000-0000-0000-0000-000000000001' and year=2027),1.5::numeric,'2027 consommé une seule fois');
 select ok(not exists(select 1 from leave_allocations where request_id='21000000-0000-0000-0000-000000000009' and state<>'consumed'),'allocations marquées consommées');
 select queue_hr_approval_reminders(now()+interval '10 days');
-select is((select count(*)::integer from notifications where request_id='21000000-0000-0000-0000-000000000009' and kind in ('reminder','overdue_alert')),2,'pas de relance supplémentaire après clôture');
+select is((select count(*)::integer from notifications where request_id='21000000-0000-0000-0000-000000000009' and kind in ('reminder','overdue_alert')),1,'pas de relance supplémentaire après clôture');
 reset role;
 
 set local role authenticated;
