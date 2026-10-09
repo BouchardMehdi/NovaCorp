@@ -85,6 +85,8 @@ L'inscription publique est désactivée. Les comptes sont créés avec l'API d'a
 
 ## Services locaux
 
+Pour un accès HTTPS à n8n depuis Internet, voir [ngrok et le webhook du TP](docs/ngrok-webhook.md). Supabase reste local. Après autorisation de l'URL publique, les créations de demandes transmettent uniquement leur identifiant et leur statut au webhook, sans déclencher de traitement RH.
+
 | Service | Adresse |
 |---|---|
 | Application | http://localhost:3000 |

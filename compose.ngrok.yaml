@@ -1,0 +1,18 @@
+# Optionnel : docker compose --env-file .env.ngrok.local -f compose.yaml -f compose.ngrok.yaml
+services:
+  n8n:
+    environment:
+      N8N_EDITOR_BASE_URL: ${N8N_PUBLIC_URL:-http://localhost:5678}/
+      N8N_WEBHOOK_URL: ${N8N_PUBLIC_URL:-http://localhost:5678}/
+      N8N_PROXY_HOPS: "1"
+      N8N_SECURE_COOKIE: "true"
+  ngrok:
+    image: ngrok/ngrok:alpine@sha256:85bea0e9c697bdad142b09cd9704420812cc44b5ae417ec4c7ac74d0a49d72f2
+    profiles: ["tunnel"]
+    env_file: .env.ngrok.local
+    command: ["http", "http://n8n:5678", "--inspect=false", "--config=/etc/ngrok.yml"]
+    volumes:
+      - ./ngrok/agent.yaml:/etc/ngrok.yml:ro
+    ports:
+      - "127.0.0.1:4040:4040"
+    restart: "no"

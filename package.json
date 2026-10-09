@@ -47,7 +47,16 @@
     "n8n:reminders:start": "node scripts/start-reminder-workflow.mjs",
     "n8n:reminders:stop": "node scripts/stop-reminder-workflow.mjs",
     "n8n:reminders:verify": "node --env-file=.env.local scripts/verify-reminders.mjs",
-    "demo:seed": "node --env-file=.env.local scripts/seed-demo-data.mjs"
+    "demo:seed": "node --env-file=.env.local scripts/seed-demo-data.mjs",
+    "ngrok:env": "node scripts/ngrok.mjs env",
+    "ngrok:start": "node scripts/ngrok.mjs start",
+    "ngrok:stop": "node scripts/ngrok.mjs stop",
+    "n8n:webhook:setup": "node scripts/setup-requests-webhook.mjs",
+    "n8n:webhook:verify": "node scripts/verify-requests-webhook.mjs",
+    "n8n:webhook:verify:public": "node scripts/verify-requests-webhook.mjs --public",
+    "n8n:webhook:connect": "node scripts/connect-requests-webhook.mjs",
+    "n8n:webhook:disconnect": "node scripts/connect-requests-webhook.mjs --disable",
+    "n8n:webhook:verify:chain": "node scripts/verify-requests-webhook-chain.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
