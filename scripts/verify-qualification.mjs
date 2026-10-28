@@ -34,7 +34,8 @@ try{
   assert.equal((await user.rpc("submit_hr_request",{p_request_id:request.id})).error,null);
   assert.equal(await execute("qualification",workflowIds[0],request.id),"success","Qualification n8n doit réussir.");
   const {data:after}=await admin.from("requests").select("status").eq("id",request.id).single();assert.equal(after.status,"pending_approval");
-  const {data:reviews}=await admin.from("ai_reviews").select("qualification,summary,status,provider,model,prompt_version").eq("request_id",request.id);assert.equal(reviews.length,1);assert.equal(reviews[0].status,"succeeded");assert.equal(reviews[0].provider,"ollama");assert.equal(reviews[0].prompt_version,"hr-qualification-v2");assert.ok(reviews[0].summary.trim());
+  const {data:reviews}=await admin.from("ai_reviews").select("qualification,summary,status,provider,model,prompt_version,rag_context").eq("request_id",request.id);assert.equal(reviews.length,1);assert.equal(reviews[0].status,"succeeded");assert.equal(reviews[0].provider,"ollama");assert.equal(reviews[0].prompt_version,"hr-qualification-v3-rag");assert.ok(reviews[0].summary.trim());
+  assert.equal(reviews[0].rag_context.method,"postgres_fts_fr_v1");assert.ok(reviews[0].rag_context.passages.length>0);assert.ok(Array.isArray(reviews[0].rag_context.citations));
   const {data:steps}=await admin.from("approval_steps").select("position,status").eq("request_id",request.id).order("position");assert.equal(steps[0].status,"pending");assert.ok(steps.slice(1).every(step=>step.status==="waiting"));assert.equal(steps.length,["equipment","training"].includes(kind)?3:2);
   const before=new Set((await messages()).map(mail=>mail.ID));
   assert.equal(await execute("manager-emails",workflowIds[1],request.id),"success");

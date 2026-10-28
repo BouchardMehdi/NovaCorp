@@ -1,5 +1,8 @@
 # Démonstration et recette S1–S5
 
+Pour prouver le RAG, importer un nouveau document RH, soumettre une nouvelle demande puis consulter ses sources avec le validateur. Voir le [parcours documentaire](rag.md). Les exécutions sans demande réservée et les anciennes revues ne prouvent pas une recherche documentaire.
+
+
 Ce guide sert à répéter la soutenance et à rejouer les contrôles sur des données fictives locales. Les scénarios manuels montrent les décisions des personnes ; les vérifications automatiques constituent des preuves techniques complémentaires.
 
 ## Préparer la session

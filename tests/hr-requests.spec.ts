@@ -103,7 +103,7 @@ for(const approve of [true,false]){
  // Simulate only the backend preparation: no orchestration is exposed by the UI.
  expect((await admin.rpc("transition_hr_request",{p_request_id:id,p_status:"under_review"})).error).toBeNull();
  expect((await admin.rpc("prepare_hr_approvals",{p_request_id:id})).error).toBeNull();
- expect((await admin.from("ai_reviews").insert({request_id:id,provider:"test",model:"fictif",prompt_version:"v1",status:"succeeded",qualification:"eligible",summary:"Synthèse fictive du test navigateur",started_at:new Date(Date.now()-60000).toISOString(),finished_at:new Date().toISOString()})).error).toBeNull();
+ expect((await admin.from("ai_reviews").insert({request_id:id,provider:"test",model:"fictif",prompt_version:"v1",status:"succeeded",qualification:"eligible",summary:"Synthèse fictive du test navigateur",rag_context:{method:"postgres_fts_fr_v1",passages:[{source_id:"ui-politique@1#1",title:"Document fictif de test",version:"1",section:"Validation",source_path:"ui-politique.md",content:"Extrait fictif : la validation reste humaine."}],citations:["ui-politique@1#1"]},started_at:new Date(Date.now()-60000).toISOString(),finished_at:new Date().toISOString()})).error).toBeNull();
  expect((await admin.rpc("transition_hr_request",{p_request_id:id,p_status:"pending_approval"})).error).toBeNull();
  const {data:step}=await admin.from("approval_steps").select("id").eq("request_id",id).eq("position",1).single();
  expect((await admin.from("approval_steps").update({status:"pending"}).eq("id",step!.id)).error).toBeNull();
@@ -117,6 +117,10 @@ for(const approve of [true,false]){
  await expect(managerPage.getByRole("navigation",{name:"Navigation de l’espace"}).getByRole("link",{name:"Mon équipe",exact:true})).toHaveAttribute("aria-current","page");
  await managerPage.goto("/tableau-de-bord/demandes/"+id);
  await expect(managerPage.getByText("Synthèse fictive du test navigateur",{exact:true})).toBeVisible();
+ await expect(managerPage.getByRole("heading",{name:"Sources documentaires",exact:true})).toBeVisible();
+ await managerPage.locator(".rag-sources summary").click();
+ await expect(managerPage.getByText("Extrait fictif : la validation reste humaine.",{exact:true})).toBeVisible();
+ await expect(page.getByRole("heading",{name:"Sources documentaires",exact:true})).toHaveCount(0);
  if(!approve){
  await managerPage.getByRole("button",{name:"Refuser",exact:true}).click();
  await expect(managerPage.locator("form [role=alert]")).toContainText("Un motif est obligatoire");

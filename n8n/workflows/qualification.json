@@ -137,13 +137,55 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const sanitize=function sanitizeAiInput(input){\n if(input?.operation!==\"qualify\"||!input.request||!input.checks)\n  throw new Error(\"ai_scope_denied\");\n const r=input.request,c=input.checks;\n if(![\"leave\",\"remote_work\",\"equipment\",\"training\"].includes(r.type))throw new Error(\"ai_scope_denied\");\n const clean=value=>{\n  if(value===null||value===undefined)return null;\n  if(typeof value!==\"string\"||value.length>8000)throw new Error(\"ai_input_invalid\");\n  return value.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/gi,\"[EMAIL MASQUE]\")\n   .replace(/\\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\b/gi,\"[ID MASQUE]\")\n   .replace(/(?:\\+33|0)[1-9](?:[ .-]?\\d{2}){4}\\b/g,\"[TELEPHONE MASQUE]\");\n };\n const request={type:r.type};\n for(const k of [\"title\",\"description\",\"start_date\",\"end_date\",\"currency\",\"training_provider\"])\n  request[k]=clean(r[k]);\n for(const k of [\"start_half_day\",\"end_half_day\"]){\n  if(r[k]!==undefined&&typeof r[k]!==\"boolean\")throw new Error(\"ai_input_invalid\");\n  request[k]=r[k]??false;\n }\n for(const k of [\"requested_days\",\"amount\",\"quantity\"]){\n  if(r[k]!==null&&r[k]!==undefined&&(typeof r[k]!==\"number\"||!Number.isFinite(r[k])||r[k]<0))throw new Error(\"ai_input_invalid\");\n  request[k]=r[k]??null;\n }\n if(!Array.isArray(c.blocking_issues)||c.blocking_issues.some(x=>typeof x!==\"string\"||!/^[a-z_]{1,80}$/.test(x)))throw new Error(\"ai_input_invalid\");\n const count=(number,ids)=>{\n  const value=number??(Array.isArray(ids)?ids.length:0);\n  if(!Number.isInteger(value)||value<0)throw new Error(\"ai_input_invalid\");return value;\n };\n if(c.calculated_leave_days!==null&&c.calculated_leave_days!==undefined&&(!Number.isFinite(c.calculated_leave_days)||c.calculated_leave_days<0))throw new Error(\"ai_input_invalid\");\n return {operation:\"qualify\",request,checks:{blocking_issues:[...c.blocking_issues],\n  calculated_leave_days:c.calculated_leave_days??null,sufficient_leave_balance:c.sufficient_leave_balance===true,\n  conflicting_requests:count(c.conflicting_requests,c.conflicting_request_ids),\n  possible_duplicates:count(c.possible_duplicates,c.possible_duplicate_ids),requires_human_review:c.requires_human_review===true}};\n};\nconst claim=$input.first().json;try{return [{json:sanitize({operation:'qualify',request:claim.request,checks:claim.checks})}];}catch{return [{json:{operation:'denied'}}];}"
+        "jsCode": "const sanitize=function sanitizeAiInput(input){\r\n if(input?.operation!==\"qualify\"||!input.request||!input.checks)\r\n  throw new Error(\"ai_scope_denied\");\r\n const r=input.request,c=input.checks;\r\n if(![\"leave\",\"remote_work\",\"equipment\",\"training\"].includes(r.type))throw new Error(\"ai_scope_denied\");\r\n const clean=value=>{\r\n  if(value===null||value===undefined)return null;\r\n  if(typeof value!==\"string\"||value.length>8000)throw new Error(\"ai_input_invalid\");\r\n  return value.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/gi,\"[EMAIL MASQUE]\")\r\n   .replace(/\\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\b/gi,\"[ID MASQUE]\")\r\n   .replace(/(?:\\+33|0)[1-9](?:[ .-]?\\d{2}){4}\\b/g,\"[TELEPHONE MASQUE]\");\r\n };\r\n const request={type:r.type};\r\n for(const k of [\"title\",\"description\",\"start_date\",\"end_date\",\"currency\",\"training_provider\"])\r\n  request[k]=clean(r[k]);\r\n for(const k of [\"start_half_day\",\"end_half_day\"]){\r\n  if(r[k]!==undefined&&typeof r[k]!==\"boolean\")throw new Error(\"ai_input_invalid\");\r\n  request[k]=r[k]??false;\r\n }\r\n for(const k of [\"requested_days\",\"amount\",\"quantity\"]){\r\n  if(r[k]!==null&&r[k]!==undefined&&(typeof r[k]!==\"number\"||!Number.isFinite(r[k])||r[k]<0))throw new Error(\"ai_input_invalid\");\r\n  request[k]=r[k]??null;\r\n }\r\n if(!Array.isArray(c.blocking_issues)||c.blocking_issues.some(x=>typeof x!==\"string\"||!/^[a-z_]{1,80}$/.test(x)))throw new Error(\"ai_input_invalid\");\r\n const count=(number,ids)=>{\r\n  const value=number??(Array.isArray(ids)?ids.length:0);\r\n  if(!Number.isInteger(value)||value<0)throw new Error(\"ai_input_invalid\");return value;\r\n };\r\n if(c.calculated_leave_days!==null&&c.calculated_leave_days!==undefined&&(!Number.isFinite(c.calculated_leave_days)||c.calculated_leave_days<0))throw new Error(\"ai_input_invalid\");\r\n return {operation:\"qualify\",request,...(input.rag?{rag:sanitizeRagContext(input.rag)}:{}),checks:{blocking_issues:[...c.blocking_issues],\r\n  calculated_leave_days:c.calculated_leave_days??null,sufficient_leave_balance:c.sufficient_leave_balance===true,\r\n  conflicting_requests:count(c.conflicting_requests,c.conflicting_request_ids),\r\n  possible_duplicates:count(c.possible_duplicates,c.possible_duplicate_ids),requires_human_review:c.requires_human_review===true}};\r\n};\nconst claim=$input.first().json;try{return [{json:sanitize({operation:'qualify',request:claim.request,checks:claim.checks})}];}catch{return [{json:{operation:'denied'}}];}"
       },
       "position": [
         880,
         0
       ],
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "Rechercher les documents",
+      "name": "Rechercher les documents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "http://supabase_kong_NovaCorp:8000/rest/v1/rpc/retrieve_hr_knowledge",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {p_run_id:$('Reserver la demande').first().json.run_id,p_lease_token:$('Reserver la demande').first().json.lease_token,p_query:[$('Minimiser les donnees').first().json.request?.title,$('Minimiser les donnees').first().json.request?.description].filter(Boolean).join(' ').slice(0,4000)} }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "position": [
+        1100,
+        0
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "novacorpSupabaseLocal",
+          "name": "NovaCorp - Supabase local"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "Joindre les references",
+      "name": "Joindre les references",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const sanitizeRagContext=function sanitizeRagContext(context){\n if(context?.method!==\"postgres_fts_fr_v1\"||typeof context.retrieved_at!==\"string\"||!Number.isFinite(Date.parse(context.retrieved_at))||!Array.isArray(context.passages)||context.passages.length>3)throw new Error(\"rag_context_invalid\");\n const seen=new Set();\n const passages=context.passages.map(p=>{\n  if(!p||typeof p.source_id!==\"string\"||!/^[-a-z0-9]{2,60}@[-a-zA-Z0-9.]{1,30}#[1-9][0-9]{0,3}$/.test(p.source_id)||seen.has(p.source_id))throw new Error(\"rag_context_invalid\");\n  seen.add(p.source_id);\n  for(const [key,max] of [[\"title\",180],[\"version\",30],[\"section\",160],[\"content\",900],[\"source_path\",255]])\n   if(typeof p[key]!==\"string\"||!p[key].trim()||p[key].length>max)throw new Error(\"rag_context_invalid\");\n  if(/[\\\\/]/.test(p.source_path)||!/^[-a-zA-Z0-9.]{1,30}$/.test(p.version)||!/^[a-f0-9]{64}$/.test(p.sha256))throw new Error(\"rag_context_invalid\");\n  return Object.fromEntries([\"source_id\",\"title\",\"version\",\"section\",\"content\",\"source_path\",\"sha256\"].map(key=>[key,p[key]]));\n });\n return {method:context.method,retrieved_at:context.retrieved_at,passages};\n};try{return [{json:{...$('Minimiser les donnees').first().json,rag:sanitizeRagContext($input.first().json)}}];}catch{return [{json:{operation:'denied'}}];}"
+      },
+      "position": [
+        1320,
+        0
+      ]
     },
     {
       "id": "Appeler le sous-workflow IA",
@@ -163,7 +205,7 @@
         }
       },
       "position": [
-        1100,
+        1540,
         0
       ],
       "onError": "continueRegularOutput"
@@ -177,7 +219,7 @@
         "jsCode": "const claim=$('Reserver la demande').first().json;const answer=$input.first().json;return [{json:{valid:answer.valid===true,result:answer.result,input_tokens:answer.input_tokens??0,output_tokens:answer.output_tokens??0,error_code:answer.error_code||'technical_error',run_id:claim.run_id,lease_token:claim.lease_token}}];"
       },
       "position": [
-        1320,
+        1760,
         0
       ]
     },
@@ -211,7 +253,7 @@
         "options": {}
       },
       "position": [
-        1540,
+        1980,
         0
       ]
     },
@@ -233,7 +275,7 @@
         }
       },
       "position": [
-        1760,
+        2200,
         0
       ],
       "credentials": {
@@ -262,7 +304,7 @@
         }
       },
       "position": [
-        1760,
+        2200,
         240
       ],
       "credentials": {
@@ -281,7 +323,7 @@
         "errorMessage": "Qualification interrompue : consulter workflow_runs et ai_reviews. Aucune décision automatique."
       },
       "position": [
-        1980,
+        2420,
         240
       ]
     }
@@ -344,6 +386,28 @@
       ]
     },
     "Minimiser les donnees": {
+      "main": [
+        [
+          {
+            "node": "Rechercher les documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rechercher les documents": {
+      "main": [
+        [
+          {
+            "node": "Joindre les references",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Joindre les references": {
       "main": [
         [
           {

@@ -1,6 +1,7 @@
 import {writeFile,mkdir} from "node:fs/promises";
 import {resultSchema,systemPrompt,buildOllamaBody,validateOllamaResponse} from "../n8n/lib/qualification.mjs";
 import {sanitizeAiInput,applyAiPolicy} from "../n8n/lib/ai-policy.mjs";
+import {sanitizeRagContext,applyRagPolicy} from "../n8n/lib/rag.mjs";
 const base="http://supabase_kong_NovaCorp:8000/rest/v1/rpc/";
 const credentials={supabaseApi:{id:"novacorpSupabaseLocal",name:"NovaCorp - Supabase local"}};
 const node=(name,type,parameters,x,y=0,extra={})=>({id:name,name,type:"n8n-nodes-base."+type,typeVersion:({httpRequest:4.2,code:2,if:2.2,set:3.4,emailSend:2.1,scheduleTrigger:1.2,manualTrigger:1,stopAndError:1,executeWorkflow:1.3,executeWorkflowTrigger:1.2})[type],parameters,position:[x,y],...extra});
@@ -16,7 +17,9 @@ const qualification=workflow("novacorpQualification","NovaCorp - Qualification d
  node("Demande reservee","if",condition("claimed"),660),
 
  node("Minimiser les donnees","code",{jsCode:"const sanitize="+sanitizeAiInput.toString()+";\nconst claim=$input.first().json;try{return [{json:sanitize({operation:'qualify',request:claim.request,checks:claim.checks})}];}catch{return [{json:{operation:'denied'}}];}"},880,0,{onError:"continueRegularOutput"}),
- node("Appeler le sous-workflow IA","executeWorkflow",{source:"database",workflowId:{__rl:true,mode:"id",value:"novacorpAiQualification"},mode:"once",options:{waitForSubWorkflow:true}},1100,0,{onError:"continueRegularOutput"}),
+ rpc("Rechercher les documents","retrieve_hr_knowledge","={{ {p_run_id:$('Reserver la demande').first().json.run_id,p_lease_token:$('Reserver la demande').first().json.lease_token,p_query:[$('Minimiser les donnees').first().json.request?.title,$('Minimiser les donnees').first().json.request?.description].filter(Boolean).join(' ').slice(0,4000)} }}",1100,{onError:"continueRegularOutput"}),
+ node("Joindre les references","code",{jsCode:"const sanitizeRagContext="+sanitizeRagContext.toString()+";try{return [{json:{...$('Minimiser les donnees').first().json,rag:sanitizeRagContext($input.first().json)}}];}catch{return [{json:{operation:'denied'}}];}"},1320),
+ node("Appeler le sous-workflow IA","executeWorkflow",{source:"database",workflowId:{__rl:true,mode:"id",value:"novacorpAiQualification"},mode:"once",options:{waitForSubWorkflow:true}},1540,0,{onError:"continueRegularOutput"}),
  node("Rattacher la reservation","code",{jsCode:"const claim=$('Reserver la demande').first().json;const answer=$input.first().json;return [{json:{valid:answer.valid===true,result:answer.result,input_tokens:answer.input_tokens??0,output_tokens:answer.output_tokens??0,error_code:answer.error_code||'technical_error',run_id:claim.run_id,lease_token:claim.lease_token}}];"},1320),
  node("Reponse valide","if",condition("valid"),1540),
  rpc("Enregistrer et activer le manager","complete_hr_qualification","={{ {p_run_id:$json.run_id,p_lease_token:$json.lease_token,p_result:$json.result,p_input_tokens:$json.input_tokens,p_output_tokens:$json.output_tokens} }}",1760,{onError:"continueErrorOutput"}),
@@ -25,7 +28,7 @@ const qualification=workflow("novacorpQualification","NovaCorp - Qualification d
 ],[
  ["Manuel","Configuration"],["Toutes les minutes","Configuration"],["Configuration","Reserver la demande"],
  ["Reserver la demande","Demande reservee"],["Demande reservee","Minimiser les donnees",null],
- ["Minimiser les donnees","Appeler le sous-workflow IA"],["Appeler le sous-workflow IA","Rattacher la reservation"],
+ ["Minimiser les donnees","Rechercher les documents"],["Rechercher les documents","Joindre les references"],["Joindre les references","Appeler le sous-workflow IA"],["Appeler le sous-workflow IA","Rattacher la reservation"],
  ["Rattacher la reservation","Reponse valide"],["Reponse valide","Enregistrer et activer le manager","Tracer l echec"],
  ["Enregistrer et activer le manager",null,"Tracer l echec"],["Tracer l echec","Qualification interrompue"]
 ]);
@@ -33,12 +36,12 @@ const qualification=workflow("novacorpQualification","NovaCorp - Qualification d
 // No credentials, database node, write operation, webhook or scheduler in this child.
 const ai=workflow("novacorpAiQualification","NovaCorp - IA qualification isolee",[
  node("Entree IA","executeWorkflowTrigger",{inputSource:"passthrough"},0),
- node("Verifier le perimetre","code",{jsCode:"const sanitize="+sanitizeAiInput.toString()+";try{return [{json:{allowed:true,input:sanitize($input.first().json)}}];}catch{return [{json:{allowed:false,valid:false,error_code:'technical_error',policy_error:'ai_scope_denied'}}];}"},220),
+ node("Verifier le perimetre","code",{jsCode:"const sanitizeRagContext="+sanitizeRagContext.toString()+";const sanitize="+sanitizeAiInput.toString()+";try{if(!$input.first().json.rag)throw new Error('rag_required');return [{json:{allowed:true,input:sanitize($input.first().json)}}];}catch{return [{json:{allowed:false,valid:false,error_code:'technical_error',policy_error:'ai_scope_denied'}}];}"},220),
  node("Perimetre autorise","if",condition("allowed"),440),
  node("Refuser hors perimetre","code",{jsCode:"return [{json:{valid:false,error_code:'technical_error',policy_error:'ai_scope_denied'}}];"},660,240),
  node("Preparer le prompt","code",{jsCode:"const build="+buildOllamaBody.toString()+";const input=$json.input;return [{json:{input,body:build(input,'qwen3:1.7b',"+JSON.stringify(resultSchema)+","+JSON.stringify(systemPrompt)+")}}];"},660),
  node("Qualifier avec Ollama","httpRequest",{method:"POST",url:"http://ollama:11434/api/chat",sendBody:true,specifyBody:"json",jsonBody:"={{ $json.body }}",options:{timeout:120000,response:{response:{fullResponse:true,neverError:true,responseFormat:"json"}}}},880,0,{onError:"continueRegularOutput"}),
- node("Valider la proposition","code",{jsCode:"const validate="+validateOllamaResponse.toString()+";const applyPolicy="+applyAiPolicy.toString()+";return [{json:applyPolicy(validate($input.first().json),$('Preparer le prompt').first().json.input)}];"},1100)
+ node("Valider la proposition","code",{jsCode:"const validate="+validateOllamaResponse.toString()+";const applyPolicy="+applyAiPolicy.toString()+";const applyRagPolicy="+applyRagPolicy.toString()+";const input=$('Preparer le prompt').first().json.input;return [{json:applyPolicy(applyRagPolicy(validate($input.first().json),input),input)}];"},1100)
 ],[['Entree IA','Verifier le perimetre'],['Verifier le perimetre','Perimetre autorise'],['Perimetre autorise','Preparer le prompt','Refuser hors perimetre'],['Preparer le prompt','Qualifier avec Ollama'],['Qualifier avec Ollama','Valider la proposition']]);
 ai.settings.callerPolicy="workflowsFromAList";
 ai.settings.callerIds="novacorpQualification";
@@ -57,6 +60,7 @@ const mailer=workflow("novacorpManagerEmails","NovaCorp - Notifications manager"
  ["Envoyer dans MailHog","Confirmer l envoi","Tracer l echec SMTP"],["Tracer l echec SMTP","Envoi interrompu"]
 ]);
 for(const n of qualification.nodes)if(["Tracer l echec","Qualification interrompue"].includes(n.name))n.position[1]=240;
+for(const [name,x] of [["Rattacher la reservation",1760],["Reponse valide",1980],["Enregistrer et activer le manager",2200],["Tracer l echec",2200],["Qualification interrompue",2420]])qualification.nodes.find(n=>n.name===name).position[0]=x;
 for(const n of mailer.nodes)if(["Tracer l echec SMTP","Envoi interrompu"].includes(n.name))n.position[1]=240;
 await mkdir("n8n/workflows",{recursive:true});
 for(const [name,data]of Object.entries({"ai-qualification.json":ai,"qualification.json":qualification,"manager-emails.json":mailer}))

@@ -1,5 +1,7 @@
 # Interface des demandes RH
 
+Le [RAG documentaire RH](rag.md) ajoute un import administrateur MD/TXT/PDF textuel, une recherche PostgreSQL et des citations visibles dans les revues. Les nouvelles qualifications utilisent le prompt `hr-qualification-v3-rag`.
+
 ## Parcours disponible
 
 Depuis `/tableau-de-bord`, le salarié peut créer une demande de congés, télétravail, matériel ou formation, enregistrer un brouillon, le modifier, le soumettre et annuler une demande non terminée après confirmation.

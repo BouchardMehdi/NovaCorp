@@ -86,6 +86,10 @@ select:focus-visible,textarea:focus-visible{outline:3px solid #1c9b98}
 .supervision-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
 .filters[aria-busy="true"] .filter-feedback{color:var(--teal)}
 .request-list{display:grid;gap:12px}
+.rag-sources{list-style:none;padding:0;display:grid;gap:16px}
+.rag-sources li{border-top:1px solid var(--line);padding-top:16px;overflow-wrap:anywhere}
+.rag-sources summary{cursor:pointer;font-size:14px;line-height:1.7;color:var(--teal)}
+.rag-sources summary:focus-visible{outline:3px solid var(--teal);outline-offset:4px}
 .request-card{display:flex;justify-content:space-between;gap:20px;align-items:center;padding:20px 24px;border:1px solid var(--line);border-radius:12px;background:white}
 .request-card:hover{border-color:var(--teal)}
 .request-card h3{margin:8px 0;font-size:18px;overflow-wrap:anywhere}

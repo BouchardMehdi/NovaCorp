@@ -1,5 +1,7 @@
 # Qualification RH avec n8n et Ollama
 
+Le [RAG documentaire RH](rag.md) ajoute un import administrateur MD/TXT/PDF textuel, une recherche PostgreSQL et des citations visibles dans les revues. Les nouvelles qualifications utilisent le prompt `hr-qualification-v3-rag`.
+
 ## Modèle gratuit et local
 
 Le workflow appelle l’API locale Ollama (`http://ollama:11434/api/chat`) avec **Qwen3 1.7B**. Il n’utilise ni abonnement cloud, ni clé API payante. Les demandes ne sont pas envoyées à un fournisseur externe. Le modèle et les données Ollama sont conservés dans le volume Docker `novacorp_ollama_data`.
@@ -15,6 +17,7 @@ Avec Supabase, n8n et leurs connexions locales configurés :
 ```powershell
 npm run db:migrate
 npm run db:types
+npm run rag:seed
 npm run llm:start
 npm run llm:pull
 npm run n8n:qualification:install
@@ -36,8 +39,8 @@ Ils réutilisent les connexions Supabase et MailHog existantes. Ollama est appel
 
 1. Réserver une demande soumise, passer son statut à « En analyse » et créer les traces du traitement.
 2. Obtenir les contrôles déterministes Supabase : dates, jours, solde, conflits et doublons.
-3. Appeler Ollama avec les faits de la demande et les contrôles. Les champs d’identité du salarié et des validateurs ne sont pas inclus ; les identifiants des demandes en conflit sont remplacés par des comptes.
-4. Valider la réponse JSON (qualification, synthèse, brouillon de réponse) et les compteurs de tokens.
+3. Rechercher les documents RH actifs du type concerné, conserver un instantané de trois passages, puis appeler Ollama avec ces extraits, les faits et les contrôles. Les champs d’identité du salarié et des validateurs ne sont pas inclus ; les identifiants des demandes en conflit sont remplacés par des comptes.
+4. Valider la réponse JSON (qualification, synthèse, brouillon de réponse et citations documentaires) et les compteurs de tokens.
 5. Enregistrer la revue et préparer le circuit manager → RH → DRH selon les seuils déjà définis.
 6. Passer en validation et activer uniquement l’étape du manager. La base crée sa notification.
 7. Le second workflow réserve cette notification, revérifie l’état de la demande et de l’étape, l’envoie dans MailHog puis marque l’envoi effectué.

@@ -11,3 +11,5 @@ supabase/.temp/
 supabase/.branches/
 %SystemDrive%/
 .npm-cache/
+rag/inbox/*
+!rag/inbox/.gitkeep
