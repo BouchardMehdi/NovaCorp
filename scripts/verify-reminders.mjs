@@ -2,7 +2,7 @@ import {createClient} from "@supabase/supabase-js";
 import {randomUUID} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import assert from "node:assert/strict";
-import {container,inside,docker} from "./n8n-tools.mjs";
+import {container,inside,docker,assertSchedulersPaused} from "./n8n-tools.mjs";
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
 if(!url||!["localhost","127.0.0.1","[::1]"].includes(new URL(url).hostname))throw new Error("Test réservé à Supabase local.");
 const admin=createClient(url,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
@@ -68,7 +68,7 @@ const age=(id,position,hours)=>{
 };
 const supervise=async id=>assert.equal(await execute("reminders",workflowIds[0],id),"success");
 try{
- assert.equal(JSON.parse(inside(container(),"const {DatabaseSync}=require(\"node:sqlite\");const db=new DatabaseSync(\"/home/node/.n8n/database.sqlite\");try{console.log(JSON.stringify(db.prepare(\"SELECT id FROM workflow_entity WHERE id IN (?,?,?,?,?,?,?,?,?) AND activeVersionId IS NOT NULL\").all(\"novacorpQualification\",\"novacorpManagerEmails\",\"novacorpApprovals\",\"novacorpNotifications\",\"novacorpReminders\",\"novacorpManagerReminders\",\"novacorpWeeklyDigest\",\"novacorpDigestEmails\",\"novacorpOnboarding\")));}finally{db.close();}")).length,0,"Dépubliez qualification, validations, supervision, digests et onboarding avant ce test.");
+ assertSchedulersPaused(JSON.parse(inside(container(),"const {DatabaseSync}=require(\"node:sqlite\");const db=new DatabaseSync(\"/home/node/.n8n/database.sqlite\");try{console.log(JSON.stringify(db.prepare(\"SELECT id FROM workflow_entity WHERE id IN (?,?,?,?,?,?,?,?,?) AND activeVersionId IS NOT NULL\").all(\"novacorpQualification\",\"novacorpManagerEmails\",\"novacorpApprovals\",\"novacorpNotifications\",\"novacorpReminders\",\"novacorpManagerReminders\",\"novacorpWeeklyDigest\",\"novacorpDigestEmails\",\"novacorpOnboarding\")));}finally{db.close();}")));
  const email="reminders-"+suffix+"@novacorp.test";
  const created=await admin.auth.admin.createUser({email,password:"QualificationDemo2026!",email_confirm:true});
  assert.equal(created.error,null);userId=created.data.user.id;

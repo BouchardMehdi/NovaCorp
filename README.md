@@ -1,31 +1,81 @@
-# NovaCorp
+# NovaCorp — Plateforme de demandes RH
 
-Plateforme interne de gestion des demandes RH, réalisée dans le cadre du fil rouge M1 DFS.
+Projet fil rouge **M1 DFS · Ingénierie de l'automatisation**. Une demande suit un parcours traçable : formulaire salarié, contrôles SQL, aide à la qualification par Ollama, validation manager → RH → DRH selon les seuils, puis notifications et supervision.
 
-## Stack et périmètre de cette branche
+**Environnement livré : développement et démonstration locale, sur données fictives.** Le déploiement VPS sera documenté après validation de sa procédure. Cette documentation distingue les fonctions implémentées des preuves de recette et des éléments de soutenance encore à préparer.
 
-- **Next.js + React + TypeScript** : interface.
-- **Supabase local dans Docker** : Auth, PostgreSQL, RLS, Storage et Realtime.
-- **MailHog dans Docker** : réception des emails de test.
-- **n8n local dans Docker** : qualification, circuit de validation et emails via Supabase et MailHog.
-- **Ollama + Qwen3 1.7B dans Docker** : LLM local gratuit appelé par n8n.
+## Sommaire
 
-L’authentification et le schéma complet de la base RH sont en place : quatre types de demandes, règles de validation versionnées, étapes, historique, soldes de congés, pièces jointes privées, contrôles IA, exécutions n8n, notifications et mesures des délais. Les quatre formulaires et leur suivi sont disponibles : brouillons, soumission, annulation, filtres, vues par rôle et décisions des validateurs. La [qualification n8n avec Ollama](docs/n8n-qualification.md) prépare et active le manager, puis le notifie dans MailHog. Le [circuit de validation n8n](docs/n8n-approvals.md) active ensuite les RH/DRH, finalise après décision humaine et envoie les changements de statut au salarié. Les [rappels quotidiens manager après 48 h et alertes RH à 48 h](docs/n8n-reminders.md) sont planifiées dans n8n. La [supervision RH](docs/hr-dashboard.md) suit les volumes, les retards, les délais et les incidents pour les RH et la DRH. L’[installation locale n8n](docs/n8n-local.md) et ses connexions sont prêtes. Le [digest hebdomadaire manager](docs/n8n-weekly-digest.md) récapitule chaque lundi à 8 h les demandes reçues, finalement approuvées et encore en attente. L’[onboarding](docs/n8n-onboarding.md) envoie un email de bienvenue et la checklist du premier jour à chaque nouveau profil. Voir le [parcours de l’interface](docs/hr-interface.md).
+- [Fonctionnalités et périmètre](#fonctionnalites)
+- [Architecture et choix techniques](#architecture)
+- [Prérequis](#prerequis)
+- [Première installation](#installation)
+- [Démarrer et arrêter le projet](#demarrage)
+- [Adresses des services](#services)
+- [Comptes et données fictives](#comptes)
+- [Règles métier](#regles)
+- [Qualification IA et validation humaine](#ia)
+- [Démonstration S1–S5](#demonstration)
+- [Tests et preuves](#tests)
+- [Configuration, secrets et données](#securite)
+- [Exploitation locale et dépannage](#exploitation)
+- [Préparation du rendu](#rendu)
+- [Structure et documentation](#documentation)
 
-Le [schéma relationnel et les permissions](docs/database-schema.md) décrivent les tables, les opérations et les permissions métier. Les [règles métier validées](docs/business-rules.md) sont actives : seuils DRH, délai de 48 h, rappel manager quotidien à 8 h après plus de 48 h, calcul et réservation des congés. Les validations et les emails sont orchestrés dans n8n ; les rappels manager sont planifiés à 8 h (Paris), les alertes RH chaque minute.
+<a id="fonctionnalites"></a>
+## Fonctionnalités et périmètre
 
+| Fonction | Comportement |
+| --- | --- |
+| Demandes RH | Congés, télétravail, matériel et formation ; brouillon, modification, soumission, suivi et annulation |
+| S1 — Notification manager | Qualification de la demande, activation du manager assigné et email dans MailHog |
+| S2 — Approbation multi-niveaux | Manager puis RH ; DRH au-delà d'un seuil ; décisions et changements de statut historisés |
+| S3 — Rappel automatique | Chaque matin à 8 h Paris, rappel au manager après **strictement plus de 48 h** d'attente ; une notification par étape et par jour |
+| Alertes RH | Échéance de 48 h pour chaque étape, contrôlée chaque minute ; une alerte par étape |
+| S4 — Digest hebdomadaire | Chaque lundi à 8 h Paris : reçues et finalement approuvées la semaine précédente, plus les attentes du manager |
+| S5 — Onboarding | Nouveau profil : bienvenue personnalisée et checklist de six étapes du premier jour, sans renvoi lors d'une mise à jour |
+| Supervision RH/DRH | Volumes, statuts, délais moyen/médian, validations en retard et incidents ; actualisation Realtime et rafraîchissement de secours |
+
+Les pièces jointes privées sont modélisées et protégées en base/Storage ; leur dépôt et leur analyse ne sont pas exposés dans le front. Pas de chatbot, RAG, export PDF/Excel ou emails Slack. MailHog reçoit les emails de démonstration ; la récupération de mot de passe et les emails Supabase Auth ne sont pas configurés.
+
+<a id="architecture"></a>
+## Architecture et choix techniques
+
+```mermaid
+flowchart LR
+  U[Salarié / Manager / RH / DRH] --> F[Next.js · React · TypeScript]
+  F --> S[Supabase local : Auth · PostgreSQL · RLS · Realtime]
+  S --> N[n8n : circuit déterministe et file de notifications]
+  N --> A[Sous-workflow de qualification IA sans clé de base]
+  A --> O[API Ollama · Qwen3 1.7B]
+  O --> A
+  A --> N
+  N --> S
+  N --> M[SMTP MailHog]
+  N -. accès public optionnel .-> G[ngrok : n8n uniquement]
+```
+
+- **Next.js 16.4.3** : formulaires et interface par rôle en code, validation serveur et session Supabase. Version fixée dans le lockfile, rappels de sécurité activés.
+- **Supabase local** : comptes, données, RLS et règles transactionnelles proches des données. Le front utilise la clé publique et la session, sans clé d'administration.
+- **n8n 2.42.5** : orchestration visible, planifications, files d'emails, reprises et traces. Les contraintes critiques restent en SQL.
+- **Ollama 0.40.1 / Qwen3 1.7B** : modèle local via API, adapté à la démonstration sur CPU. Pas de facture API cloud ; les ressources de la machine ont néanmoins un coût.
+- **MailHog** : contrôle des emails sans envoi à de vraies adresses. **ngrok** : accès HTTPS optionnel à n8n ; ce tunnel ne constitue pas un déploiement hors du PC.
+
+Les comptes, mots de passe et emails d'exemple ci-dessous sont uniquement fictifs. Les choix Q1–Q5, le budget et le plan ×100 doivent être développés dans le dossier final, pas déduits de la seule liste de technologies.
+
+<a id="prerequis"></a>
 ## Prérequis
 
-- Node.js **22.19 ou supérieur compatible avec Next.js** et npm.
-- Docker Desktop démarré, avec les conteneurs Linux.
-- Ports locaux disponibles : **3000**, **1025**, **8025**, **5678**, **11434**, **54320 à 54324**.
-- Internet au premier démarrage pour télécharger les dépendances et les images.
+- Windows/PowerShell ou environnement compatible ; **Node.js 22.19+** et npm ; dépendances installées avec `npm ci`.
+- Docker Desktop démarré en mode conteneurs Linux ; Git.
+- Ports libres : 3000, 1025, 8025, 5678, 11434, 54320–54324 ; 4040 pour ngrok si utilisé.
+- Connexion Internet au premier téléchargement des dépendances, images et poids du modèle. Le modèle représente environ 1,4 Go, en plus des images/volumes.
+- Supabase CLI **2.120.0** est fixée dans le projet : aucun compte Supabase cloud requis.
 
-Supabase est lancé par la CLI **2.120.0**, fixée dans les dépendances. Aucun compte Supabase cloud n’est nécessaire.
+<a id="installation"></a>
+## Première installation
 
-## Premier démarrage
-
-Depuis la racine du dépôt :
+Depuis la racine du dépôt, avec Docker Desktop ouvert :
 
 ```powershell
 npm ci
@@ -35,11 +85,11 @@ npm run local:env
 npm run db:migrate
 npm run auth:seed
 npm run business:seed
+npm run llm:start
+npm run llm:pull
 npm run n8n:start
 npm run n8n:setup
 npm run n8n:verify
-npm run llm:start
-npm run llm:pull
 npm run n8n:qualification:install
 npm run n8n:qualification:start
 npm run n8n:approvals:install
@@ -53,109 +103,14 @@ npm run n8n:onboarding:start
 npm run dev
 ```
 
-Ouvrir **http://localhost:3000/connexion**. Pour n8n, ouvrir **http://localhost:5678** et créer le compte propriétaire au premier accès (indépendant des comptes salariés).
+MailHog crée le réseau `novacorp_default`, partagé avec Supabase. `local:env` génère `.env.local` sans afficher les clés. `n8n:start` prépare sa configuration locale ; `n8n:setup` importe les connexions Supabase/MailHog chiffrées et le workflow de vérification. Créer le propriétaire n8n au premier accès : ce compte est indépendant des comptes RH.
 
-Le premier démarrage de Supabase télécharge plusieurs images et applique la migration des profils. MailHog crée le réseau Docker `novacorp_default`, partagé avec Supabase. Les ports MailHog sont liés à l'interface locale. La CLI Supabase peut publier ses ports sur toutes les interfaces : cet environnement reste réservé au développement local.
+L'import d'un workflow ne le publie pas. La qualification utilise un sous-workflow IA nommé `novacorpAiQualification`, importé avec elle ; ne pas l'effacer. Après un changement des générateurs/prompts, relancer l'installation puis l'activation correspondantes. L'ancien `novacorpManagerEmails` est remplacé par `novacorpNotifications` : ne pas le republier avec le circuit complet.
 
-`npm run local:env` écrit l'URL, la clé publique et la clé d'administration locales dans **.env.local**, sans les afficher. Ce fichier est ignoré par Git. La clé d'administration sert uniquement aux scripts locaux d'initialisation, aux tests et au backend n8n ; elle n'est jamais utilisée par les clients Next.js.
+<a id="demarrage"></a>
+## Démarrer et arrêter le projet
 
-La clé publique peut être une clé publishable ou la clé anon fournie par la CLI. Les accès aux données restent soumis à la session utilisateur et aux politiques RLS.
-
-### Comptes fictifs de démonstration
-
-| Email | Rôle |
-|---|---|
-| `salarie@novacorp.test` | Salarié : Camille Durand |
-| `manager@novacorp.test` | Manager : Alex Martin |
-| `manager2@novacorp.test` | Responsable d’Alex : Sofia Moreau (manager) |
-| `rh@novacorp.test` | RH : Morgan Petit |
-| `drh@novacorp.test` | DRH : Lou Bernard |
-
-Mot de passe initial commun : **`NovaCorpDemo2026!`**.
-
-Ces identifiants sont réservés aux données fictives locales. Camille est rattaché à Alex, et Alex à Sofia pour ses propres demandes. Sofia valide les demandes d’Alex ; Alex continue de valider celles de son équipe. Sofia n’a pas de manager affecté dans ce jeu et ne peut donc pas soumettre de demande personnelle. Une affectation existante du responsable d’Alex est conservée lors des relances. Le script peut être relancé : il réutilise les comptes existants et met à jour leurs profils, sans réinitialiser leurs mots de passe.
-
-### Jeu de données pour les essais manuels
-
-Après l'initialisation des comptes et des règles métier :
-
-```powershell
-npm run demo:seed
-```
-
-Crée **23 demandes fictives** pour **Emma Laurent** : `demo.salarie@novacorp.test`, mot de passe initial **`NovaCorpDemo2026!`**. Le jeu couvre les quatre types, les différents niveaux de validation, les décisions finales, les relances et les incidents. Une relance conserve les demandes existantes et leur progression. Les comptes habituels sont conservés. Voir les [scénarios et précisions sur les historiques simulés](docs/demo-data.md).
-
-L'inscription publique est désactivée. Les comptes sont créés avec l'API d'administration Supabase et confirmés par le script.
-
-## Services locaux
-
-Pour un accès HTTPS à n8n depuis Internet, voir [ngrok et le webhook du TP](docs/ngrok-webhook.md). Supabase reste local. Après autorisation de l'URL publique, les créations de demandes transmettent uniquement leur identifiant et leur statut au webhook, sans déclencher de traitement RH.
-
-| Service | Adresse |
-|---|---|
-| Application | http://localhost:3000 |
-| API Supabase | http://127.0.0.1:54321 |
-| Supabase Studio | http://127.0.0.1:54323 |
-| MailHog | http://localhost:8025 |
-| n8n | http://localhost:5678 |
-| Ollama | http://localhost:11434 |
-| SMTP MailHog, depuis le réseau Docker partagé | `mailhog:1025` |
-
-MailHog est prêt pour les futures notifications métier envoyées par n8n. La récupération du mot de passe et les emails Supabase Auth ne sont pas configurés à cette étape.
-
-MailHog conserve ses messages en mémoire : ils ne sont pas conservés après un redémarrage du conteneur. Les emails de démonstration restent locaux. Les emails de validation et de statut sont envoyés par n8n.
-
-## Authentification et accès
-
-- `/connexion` : formulaire avec validation serveur, erreurs et état de chargement.
-- `/tableau-de-bord` : espace privé ; un visiteur est redirigé vers la connexion.
-- `/` : redirection vers l'espace privé.
-- La session est renouvelée dans `src/proxy.ts`.
-- Les pages privées vérifient l'identité auprès de Supabase Auth avec `getUser()`.
-- Le serveur utilise la clé publique et la session du compte, sans contournement de la RLS.
-- Une session absente ou invalide ne permet pas d'accéder aux pages privées.
-- Un utilisateur connecté est redirigé depuis la page de connexion vers son espace.
-
-La table `public.profiles` contient le nom, le rôle et le manager. Un salarié lit son profil ; un manager lit aussi ceux de son équipe ; les RH et le DRH lisent tous les profils. Aucun utilisateur ne peut modifier directement son rôle, son manager ou son profil. Les demandes et leurs fichiers sont protégés par RLS ; les brouillons restent privés. Voir la [matrice des accès](docs/database-schema.md#permissions-rls).
-
-Si Supabase n'est pas configuré, la page de connexion présente un message d'indisponibilité et désactive le formulaire. Si le service ne répond pas pendant une tentative, un message d'erreur est affiché.
-
-## Vérifications
-
-Avec Supabase démarré et les comptes fictifs créés. Si les workflows métier sont publiés, les arrêter avec `npm run n8n:qualification:stop` ainsi que `npm run n8n:approvals:stop` et `npm run n8n:reminders:stop` ainsi que `npm run n8n:digest:stop` et `npm run n8n:onboarding:stop` avant les tests navigateur, puis les reprendre avec `npm run n8n:qualification:start` puis `npm run n8n:approvals:start` et `npm run n8n:reminders:start`, puis `npm run n8n:digest:start` et `npm run n8n:onboarding:start` :
-
-```powershell
-npm run db:lint
-npm run db:test
-npm run db:verify
-npm run n8n:verify
-npm run n8n:approvals:verify
-npm run n8n:reminders:verify
-npm run n8n:digest:verify
-npm run n8n:onboarding:verify
-npm run lint
-npm run typecheck
-npm run build
-npx playwright install chromium
-npm test
-```
-
-Les tests SQL couvrent les permissions, les contraintes, les règles et le parcours de validation complet avec DRH. Leurs données fictives sont annulées à la fin de chaque test.
-
-Les tests navigateur couvrent les champs invalides, l'accès anonyme, une session forgée, le mauvais mot de passe, la connexion, le maintien de session après actualisation, la déconnexion, l'isolation des profils par RLS et l'affichage mobile. Les tests RH couvrent également les quatre formulaires, les reprises après erreur sans doublon, les réservations de congés, les filtres, la confidentialité des brouillons et les décisions des validateurs avec actualisation du suivi. Ils créent puis nettoient leurs propres données fictives et nécessitent le conteneur PostgreSQL local. Playwright démarre automatiquement Next.js si aucun serveur ne tourne sur le port 3000.
-
-## Arrêt et reprise
-
-Arrêter Next.js avec **Ctrl+C**, puis :
-
-```powershell
-npm run n8n:stop
-npm run llm:stop
-npm run supabase:stop
-npm run mail:stop
-```
-
-Les données Supabase sont conservées. Pour reprendre :
+### Reprise d'une installation existante
 
 ```powershell
 npm run mail:start
@@ -166,39 +121,230 @@ npm run n8n:start
 npm run dev
 ```
 
-Après un changement de clés locales, relancer `npm run local:env` et redémarrer Next.js.
+Les volumes conservés contiennent les comptes, données, modèle et publications. Ne pas rejouer les initialisations pour simplement reprendre une démonstration.
 
-**Attention : `npx supabase db reset` efface les données de la base locale.** Si une réinitialisation est volontaire, recréer ensuite les comptes avec `npm run auth:seed`, puis les soldes et référents avec `npm run business:seed`.
+### Démarrer les services du Compose
 
-## Structure
-
-```text
-src/app/connexion/             Formulaire et action serveur de connexion
-src/app/tableau-de-bord/       Espace privé, formulaires, suivi et décisions
-src/lib/auth/                  Validation et vérification de l'utilisateur
-src/lib/supabase/              Clients navigateur et serveur
-src/proxy.ts                   Renouvellement de session et protection des routes
-supabase/config.toml           Configuration des services locaux
-supabase/migrations/           Schéma RH, politiques RLS et opérations contrôlées
-supabase/tests/database/       Tests SQL transactionnels
-src/types/database.ts          Types publics générés (npm run db:types)
-docs/database-schema.md        Schéma relationnel et contrat pour n8n
-docs/business-rules.md         Règles métier validées et initialisation
-docs/n8n-local.md              Installation et connexions n8n
-docs/n8n-qualification.md      Qualification locale avec Ollama
-docs/n8n-approvals.md          Circuit de validation et emails
-docs/n8n-reminders.md          Rappels manager à 8 h et alertes RH 48 h
-docs/n8n-weekly-digest.md      Digest manager chaque lundi à 8 h
-docs/n8n-onboarding.md         Email de bienvenue et checklist premier jour
-docs/hr-dashboard.md           Indicateurs et supervision RH
-n8n/workflows/                 Workflows exportés sans secrets
-scripts/                       Configuration locale et comptes fictifs
-tests/                         Tests de connexion, permissions et parcours RH
-compose.yaml                   n8n, MailHog, volume et réseau Docker local
+```powershell
+docker compose --profile automation up -d
 ```
 
-## Références
+Cette commande concerne **MailHog, n8n et Ollama**. Supabase est lancé par sa CLI et le front par `npm run dev` : ils ne sont pas inclus dans ce Compose.
 
-- [Supabase local et CLI](https://supabase.com/docs/guides/local-development)
-- [Supabase Auth avec Next.js](https://supabase.com/docs/guides/auth/server-side/nextjs)
-- [MailHog](https://github.com/mailhog/MailHog)
+### Accès public optionnel à n8n
+
+```powershell
+npm run ngrok:env
+# Renseigner le token uniquement dans .env.ngrok.local
+npm run ngrok:start
+```
+
+Exécuter `ngrok:start` après les commandes qui réappliquent la configuration locale de n8n. Supabase reste local. Le webhook du TP transmet uniquement l'identifiant, le statut et le type d'événement après autorisation de sa destination ; il ne lance pas le traitement métier. Lire [la procédure ngrok](docs/ngrok-webhook.md) avant de le connecter.
+
+En mode public, utiliser l'URL HTTPS affichée par `ngrok:start` pour ouvrir l'éditeur n8n.
+
+### Arrêt sans suppression des données
+
+Arrêter le front avec `Ctrl+C`, puis :
+
+```powershell
+npm run ngrok:stop  # si le tunnel est actif
+npm run n8n:stop
+npm run llm:stop
+npm run supabase:stop
+npm run mail:stop
+```
+
+Ne pas supprimer les volumes pour arrêter le projet. **`supabase db reset` efface les données locales**. MailHog stocke ses messages en mémoire : leur contenu disparaît à son redémarrage.
+
+<a id="services"></a>
+## Adresses des services
+
+| Service | Adresse locale |
+| --- | --- |
+| Application | <http://localhost:3000/connexion> |
+| n8n | <http://localhost:5678> |
+| MailHog | <http://localhost:8025> |
+| Supabase API | <http://127.0.0.1:54321> |
+| Supabase Studio | <http://127.0.0.1:54323> |
+| Ollama | <http://127.0.0.1:11434> |
+| SMTP depuis Docker | `mailhog:1025` |
+
+<a id="comptes"></a>
+## Comptes et données fictives
+
+Mot de passe **initial** commun : `NovaCorpDemo2026!`. Les scripts ne réinitialisent pas un mot de passe déjà modifié.
+
+| Compte | Rôle / relation |
+| --- | --- |
+| `salarie@novacorp.test` | Camille Durand, salarié rattaché à Alex |
+| `manager@novacorp.test` | Alex Martin, manager de Camille ; Sofia valide ses demandes personnelles |
+| `manager2@novacorp.test` | Sofia Moreau, manager d'Alex ; sans manager supérieur dans ce jeu |
+| `rh@novacorp.test` | Morgan Petit, RH |
+| `drh@novacorp.test` | Lou Bernard, DRH |
+| `demo.salarie@novacorp.test` | Emma Laurent, jeu de démonstration optionnel |
+
+Pour préparer les 23 demandes d'Emma :
+
+```powershell
+npm run demo:seed
+```
+
+Le jeu est idempotent et conserve les demandes existantes. Il contient des historiques **simulés**, pas des preuves d'exécutions réelles du modèle. Certaines anciennes fixtures portent encore des intitulés de relance à 24 h ; la règle S3 active est bien le rappel quotidien après plus de 48 h. Voir [les données de démonstration](docs/demo-data.md).
+
+L'inscription publique est désactivée. Les comptes sont créés via l'administration. Sofia ne peut pas soumettre de demande personnelle tant qu'aucun manager ne lui est affecté ; ce comportement protège contre l'auto-validation.
+
+<a id="regles"></a>
+## Règles métier
+
+| Type | Circuit | Seuil de validation DRH |
+| --- | --- | --- |
+| Congés | Manager → RH → DRH si seuil dépassé | Strictement plus de 10 jours ouvrés |
+| Télétravail | Manager → RH | Pas de DRH |
+| Matériel | Manager → RH → DRH si seuil dépassé | Strictement plus de 1 000 EUR |
+| Formation | Manager → RH → DRH si seuil dépassé | Strictement plus de 1 500 EUR |
+
+Les règles et validateurs sont figés à la soumission. Le salarié ne modifie plus une demande soumise. Les congés sont réservés à la soumission, consommés à l'acceptation, libérés au refus/à l'annulation. Les dates, soldes, conflits, doublons et décisions sont contrôlés en base, sous RLS. Une échéance ne vaut jamais accord automatique. Voir [les règles détaillées](docs/business-rules.md).
+
+Chaque étape dispose de 48 h calendaires à partir de son activation. S3 prépare les rappels à 8 h Paris ; S4 prépare les digests le lundi à 8 h Paris. **L'heure prévue est celle de mise en file**, la réception dépend de la file SMTP et du fonctionnement de Docker/n8n. Les changements d'heure sont pris en compte. Les semaines manquées ne sont pas reconstituées automatiquement.
+
+<a id="ia"></a>
+## Qualification IA et validation humaine
+
+Le parent n8n réserve la demande et obtient ses contrôles SQL. Il retire les identités structurées, identifiants privés et jetons avant d'appeler le sous-workflow. Ce dernier n'a aucun identifiant Supabase, aucun outil d'écriture et aucune URL choisie par le modèle. Il appelle uniquement Ollama, puis valide une sortie JSON fermée : qualification, synthèse, brouillon de réponse.
+
+Les faits SQL priment sur la proposition du modèle. Les emails/UUID/téléphones reconnaissables sont masqués dans le texte ; cela ne garantit pas l'anonymisation de tout texte libre. Le modèle peut se tromper. Manager, RH et DRH prennent les décisions métier ; les écritures automatiques concernent les traces et la préparation du circuit. Le brouillon IA n'est pas envoyé automatiquement au salarié.
+
+Prompt actif : **`hr-qualification-v2`**. Les prompts, le schéma, la politique et les descriptions des RPC autorisées sont versionnés. Consulter [le contrat IA et les tests N1–N5](docs/ai-governance.md). Les N1–N5 sont propres au projet et ne sont pas présentés comme les T1–T5 officiels du cours, dont la définition doit encore être rapprochée.
+
+<a id="demonstration"></a>
+## Démonstration S1–S5
+
+Le [guide de démonstration](docs/demo-scenarios.md) précise les comptes, données, actions, résultats attendus et preuves pour chaque scénario, ainsi que les simulations utilisées pour les horodatages.
+
+```powershell
+npm run demo:verify -- S1
+npm run demo:verify -- S2
+npm run demo:verify -- S3
+npm run demo:verify -- S4
+npm run demo:verify -- S5
+npm run demo:verify -- IA
+# Toute la recette locale
+npm run demo:verify
+```
+
+Le lanceur suspend temporairement le service n8n et utilise un conteneur de test sans serveur/planificateur, sur son volume existant. Les copies de workflow ont des identifiants aléatoires ; les comptes/demandes de test sont dédiés et nettoyés. Les publications restent inchangées. Le service initial est redémarré en fin de test avec sa configuration existante, y compris ngrok. Ne pas interrompre brutalement une recette et ne pas en lancer deux simultanément. L'accès public n8n est indisponible pendant les essais isolés. `IA` seul appelle Ollama sans suspendre n8n.
+
+Rapport : `test-results/demo-report.json` (ignoré par Git). N'annoncer comme réussis que les scénarios réellement exécutés avec `passed: true` et une reprise confirmée par `restored: true`. Les vérifications restent **locales et fictives**, pas des tests à lancer sur la future production.
+
+<a id="tests"></a>
+## Tests et preuves
+
+| Commande | Vérification |
+| --- | --- |
+| `npm run ai:test` | Contrat, périmètre, confidentialité, sorties invalides et politique déterministe ; inspection du sous-workflow |
+| `npm run demo:verify -- IA` | Trois cas négatifs avec le vrai modèle local |
+| `npm run db:verify` | Reconstruction des migrations, tests SQL transactionnels et courses concurrentes dans une base temporaire |
+| `npm run db:test` | Tests SQL sur la base locale, fixtures annulées à la fin |
+| `npm run db:lint` | Validation des fonctions SQL |
+| `npm run lint` / `npm run typecheck` | ESLint / TypeScript |
+| `npm run build` | Compilation de production du front |
+| `npm test` | Playwright : Auth, RLS, quatre formulaires, décisions manager et supervision RH |
+
+Pour Playwright, installer le navigateur avec `npx playwright install chromium`. Suspendre n8n pendant les tests pour que ses planificateurs ne traitent pas les fixtures de l'interface :
+
+```powershell
+docker compose --profile automation stop n8n
+npm test
+docker compose --profile automation start n8n
+```
+
+Les scripts `n8n:*:verify` restent disponibles pour isoler un composant ; ils exigent des planificateurs dépubliés ou l'environnement isolé du lanceur. S2 utilise le vrai LLM via `demo:verify` ; le script historique seul utilise une qualification SQL de fixture. Les décisions du test automatique sont simulées sous les permissions des validateurs, tandis que Playwright et la démo manuelle utilisent les boutons de l'application.
+
+Les captures et rapports de tests sont dans `test-results/`. Conserver des preuves datées pour la soutenance, sans secrets et sans présenter les fixtures simulées comme des mesures réelles.
+
+<a id="securite"></a>
+## Configuration, secrets et données
+
+| Fichier / stockage | Rôle |
+| --- | --- |
+| `.env.local` | URL Supabase, clé publique et clé backend pour les scripts locaux ; généré par `local:env`, ignoré par Git |
+| `.env.n8n.local` | Clés backend/chiffrement n8n ; conserver avec le volume, ne pas afficher |
+| `.env.ngrok.local` | Token ngrok et URL autorisée ; ignoré par Git |
+| Identifiants chiffrés n8n | Connexions Supabase et SMTP ; exports JSON sans secrets |
+| Supabase Vault | URL et secret du webhook optionnel |
+
+Ne jamais publier les fichiers `.env`, exporter des identifiants en clair ou copier des clés dans des captures. Ne pas afficher un `docker compose config` contenant les valeurs résolues. `.env.example` décrit uniquement les variables nécessaires au front et aux scripts, sans secrets réels.
+
+Les pages privées vérifient la session ; la RLS isole les profils, demandes, fichiers et revues selon les rôles. Les RPC backend restent réservées à `service_role`. Les salariés n'éditent pas leur rôle/manager et les brouillons restent privés. Les données utilisées pour le TP doivent être fictives. La **durée de conservation et la procédure de purge restent à définir** dans le dossier final ; aucune purge automatique des demandes n'est annoncée.
+
+<a id="exploitation"></a>
+## Exploitation locale et dépannage
+
+| Situation | Contrôle / action |
+| --- | --- |
+| Connexion indisponible | Démarrer Supabase ; vérifier `.env.local` avec `local:env`, puis redémarrer le front si les clés ont changé |
+| Demande en analyse | Vérifier Ollama, modèle chargé, exécution de qualification et `workflow_runs` ; reprise limitée à trois tentatives |
+| Aucun email | Vérifier MailHog, publication du workflow d'envoi et file correspondante ; cinq tentatives SMTP maximum |
+| Manager sans demandes d'équipe | Utiliser « Mon équipe » et vérifier le manager figé à la soumission ; Alex et Sofia ont des périmètres distincts |
+| Soumission refusée pour manager absent | Affecter un supérieur valide ; aucune auto-validation de manager |
+| Tunnel ne répond plus | Relancer `ngrok:start` après la reprise locale de n8n ; ne pas changer la destination autorisée sans la valider |
+| Rappel/digest absent | Vérifier jour, heure Paris, durée d'attente, publication et file ; ne pas changer le cron pour simuler un test |
+| Tests interrompus | Vérifier que le conteneur n8n principal est redémarré et qu'aucun conteneur `novacorp-verify-*` dédié n'utilise encore son volume |
+
+```powershell
+npm run n8n:logs
+docker compose --profile automation ps
+npm run supabase:status
+```
+
+La supervision affiche les incidents des demandes ; les erreurs d'onboarding/digest sont consultables dans leurs files et exécutions n8n. Les alertes RH de délai sont implémentées ; une alerte technique globale, les sauvegardes et l'exploitation VPS seront traitées dans la phase production. SMTP ne garantit pas exactement une livraison : une interruption après réception mais avant acquittement peut provoquer un nouvel envoi.
+
+<a id="rendu"></a>
+## Préparation du rendu
+
+| Attente | État / preuve à préparer |
+| --- | --- |
+| Fonctionnel | Scénarios S1–S5 et guide rejouable ; montrer un cycle complet réel, un refus et un rejeu sans doublon |
+| Architecture | Schéma global ci-dessus, schéma de données et documents de circuit ; compléter la justification Q1–Q5 et le tableau 5S du cours |
+| Pilotage IA | Sous-workflow contraint, prompt versionné, matrice N1–N5 ; rapprocher les T1–T5 officiels et conserver les preuves |
+| Production | Déploiement VPS, alertes techniques, sauvegardes et procédures à définir après les instructions de déploiement |
+| Mesures et coûts | Relever les délais avant/après sur un échantillon explicite, chiffrer infrastructure/LLM et scénario ×100 ; ne pas utiliser les historiques simulés comme observations |
+| Soutenance | Préparer ensuite le dossier final, la présentation de 10 minutes et une vidéo/captures de secours ; répéter la répartition de parole |
+
+Les améliorations bonus présentées doivent disposer d'une fiche : intérêt utilisateur, effort de développement, coût d'exploitation et critère de décision. Aucune note n'est déduite du seul nombre de tests ; chaque ligne de la grille doit avoir une preuve montrable.
+
+<a id="documentation"></a>
+## Structure et documentation
+
+```text
+src/                         Front, Auth, formulaires et supervision
+supabase/migrations/         Schéma, RLS et fonctions transactionnelles
+supabase/tests/database/     Tests SQL
+n8n/lib/                     Prompt, schéma et politique IA
+n8n/workflows/               Exports générés sans secrets
+scripts/                     Installation, recettes et données fictives
+tests/                       Tests unitaires IA et tests Playwright
+docs/                        Contrats, procédures et démonstration
+compose.yaml                 n8n, Ollama et MailHog locaux
+compose.ngrok.yaml           Tunnel optionnel vers n8n
+```
+
+| Document | Contenu |
+| --- | --- |
+| [Scénarios de démonstration](docs/demo-scenarios.md) | Préparation, résultats attendus, simulations et preuves |
+| [Pilotage de l'IA](docs/ai-governance.md) | Contrat, limites, RPC, prompts et matrice négative |
+| [Schéma de données](docs/database-schema.md) | Relations, champs et permissions |
+| [Règles métier](docs/business-rules.md) | Seuils, soldes et circuits |
+| [Installation n8n](docs/n8n-local.md) | Connexions, sécurité et cycle de vie |
+| [Qualification](docs/n8n-qualification.md) | Parcours Ollama et traces |
+| [Approbations](docs/n8n-approvals.md) | Décisions et notifications |
+| [Relances](docs/n8n-reminders.md) | Rappels manager et alertes RH |
+| [Digest](docs/n8n-weekly-digest.md) | Semaine de référence et file SMTP |
+| [Onboarding](docs/n8n-onboarding.md) | Bienvenue et checklist |
+| [Supervision](docs/hr-dashboard.md) | Compteurs et incidents |
+| [Interface](docs/hr-interface.md) | Formulaires, vues et actions |
+| [Données fictives](docs/demo-data.md) | Jeu d'Emma et historiques simulés |
+| [Ngrok / webhook](docs/ngrok-webhook.md) | Destination autorisée, payload minimal et Vault |
+
+Références : [Supabase local](https://supabase.com/docs/guides/local-development), [n8n sous-workflows](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.executeworkflow/), [Ollama](https://docs.ollama.com/), [Next.js](https://nextjs.org/docs).

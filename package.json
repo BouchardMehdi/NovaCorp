@@ -66,7 +66,10 @@
     "n8n:onboarding:install": "npm run n8n:onboarding:build && node scripts/manage-onboarding-workflow.mjs install",
     "n8n:onboarding:start": "node scripts/manage-onboarding-workflow.mjs start",
     "n8n:onboarding:stop": "node scripts/manage-onboarding-workflow.mjs stop",
-    "n8n:onboarding:verify": "node --env-file=.env.local scripts/verify-onboarding.mjs"
+    "n8n:onboarding:verify": "node --env-file=.env.local scripts/verify-onboarding.mjs",
+    "ai:test": "node --test tests/qualification.unit.mjs tests/ai-policy.unit.mjs",
+    "ai:verify": "node scripts/verify-ai-policy.mjs",
+    "demo:verify": "node scripts/demo-verify.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

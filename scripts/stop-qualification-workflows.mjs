@@ -1,3 +1,4 @@
+import {ready} from "./ngrok-tools.mjs";
 import {container,inside,docker} from "./n8n-tools.mjs";
 try{
  console.log(inside(container(),`
@@ -9,5 +10,5 @@ try{
  }catch{console.error("Arrêt des workflows impossible.");process.exitCode=1;}
  `).trim());
  docker(["compose","--profile","automation","restart","n8n"]);
- docker(["compose","--profile","automation","up","-d","--wait","n8n"]);
+ await ready();
 }catch{console.error("Arrêt impossible. Vérifiez le service n8n.");process.exitCode=1;}

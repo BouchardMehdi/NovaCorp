@@ -2,7 +2,7 @@ import {createClient} from "@supabase/supabase-js";
 import {randomUUID} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import assert from "node:assert/strict";
-import {container,inside} from "./n8n-tools.mjs";
+import {container,inside,assertSchedulersPaused} from "./n8n-tools.mjs";
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
 if(!url||!["localhost","127.0.0.1","[::1]"].includes(new URL(url).hostname))throw new Error("Verification reservee a Supabase local.");
 const admin=createClient(url,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
@@ -27,7 +27,7 @@ async function messages(){const response=await fetch("http://127.0.0.1:8025/api/
 try{
 
  const published=JSON.parse(inside(container(),`const {DatabaseSync}=require('node:sqlite');const db=new DatabaseSync('/home/node/.n8n/database.sqlite');try{console.log(JSON.stringify(db.prepare('select id from workflow_entity where id=? and activeVersionId is not null').all('novacorpOnboarding')));}finally{db.close();}`));
- assert.equal(published.length,0,'Depubliez onboarding avec npm run n8n:onboarding:stop avant le test.');
+ assertSchedulersPaused(published);
  const email='onboarding-'+suffix+'@novacorp.test';
  const created=await admin.auth.admin.createUser({email,password:randomUUID()+'Aa1!',email_confirm:true,user_metadata:{first_name:'Nina',last_name:'Verification'}});assert.equal(created.error,null);employeeId=created.data.user.id;
  const queued=await admin.from('employee_onboardings').select('*').eq('employee_id',employeeId).single();assert.equal(queued.error,null);assert.equal(queued.data.status,'queued');assert.equal(queued.data.checklist.length,6);
