@@ -1,3 +1,5 @@
+import {ready} from "./ngrok-tools.mjs";
+import {publicationSyncCode} from "./n8n-publication.mjs";
 import {container,inside,docker} from "./n8n-tools.mjs";
 try{
  const models=await fetch("http://127.0.0.1:11434/api/tags",{signal:AbortSignal.timeout(10000)});
@@ -6,12 +8,14 @@ try{
  console.log(inside(container(),`
  const cp=require("node:child_process");
  try{
-  for(const id of ["novacorpQualification"])
+  for(const id of ["novacorpAiQualification","novacorpQualification"])
    cp.execFileSync("n8n",["publish:workflow","--id",id],{stdio:"pipe"});
+  const publicationIds=["novacorpAiQualification","novacorpQualification"];
+  ${publicationSyncCode}
   console.log("Workflows publiés.");
  }catch{console.error("Publication impossible.");process.exitCode=1;}
  `).trim());
  docker(["compose","--profile","automation","restart","n8n"]);
- docker(["compose","--profile","automation","up","-d","--wait","n8n"]);
+ await ready();
  console.log("Qualification planifiée chaque minute. Les emails sont activés par n8n:approvals:start.");
 }catch{console.error("Activation impossible. Vérifiez Ollama, le modèle et l’import des workflows.");process.exitCode=1;}

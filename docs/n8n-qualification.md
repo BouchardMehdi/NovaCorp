@@ -27,6 +27,7 @@ Les workflows restent non publiés après le simple import. La qualification est
 
 Ouvrir n8n sur http://localhost:5678. Les workflows sont :
 - **NovaCorp - Qualification des demandes** (`novacorpQualification`).
+- **NovaCorp - IA qualification isolee** (`novacorpAiQualification`), sous-workflow publié sans clé de base, appelé uniquement par la qualification. Voir le [contrat IA](ai-governance.md).
 - L’ancien **NovaCorp - Notifications manager** (`novacorpManagerEmails`) est remplacé par **NovaCorp - Notifications RH et salarié** lors de l’installation du circuit de validation.
 
 Ils réutilisent les connexions Supabase et MailHog existantes. Ollama est appelé directement sur le réseau Docker, sans identifiant supplémentaire. Le port hôte 11434 est lié uniquement à l’interface locale.
@@ -67,7 +68,13 @@ SMTP ne garantit pas un envoi exactement une fois : une interruption après la r
 
 Les traces stockent le fournisseur, le modèle, la version du prompt, les contrôles, les tokens et les erreurs. Les erreurs techniques enregistrées restent génériques et ne recopient pas des secrets ou des requêtes HTTP. Le coût API local est nul ; la consommation des ressources de la machine n’est pas mesurée.
 
+Depuis `hr-qualification-v2`, le parent minimise les données avant le sous-workflow. Le modèle n'a aucun outil SQL ; les contrôles, la sortie JSON et les décisions humaines sont vérifiés séparément. Les anciennes revues v1 sont conservées et l'idempotence du circuit reste inchangée.
+
+La version n8n 2.42.5 utilise une table de version publiée distincte pour `Execute Sub-workflow`. Après la publication CLI, le script d'activation synchronise cette référence avec la version active, uniquement pour `novacorpAiQualification` et `novacorpQualification`, puis redémarre le service. Les vérifications appliquent la même synchronisation aux seules copies temporaires. Ce raccord est spécifique à la version n8n fixée dans le Compose et doit être revérifié lors d'une future mise à jour de n8n.
+
 ## Vérifications
+
+Pour une recette complète avec isolation et reprise automatique du service, utiliser `npm run demo:verify -- S1`. Les commandes directes ci-dessous nécessitent l'arrêt des planificateurs concernés ; voir le [guide de démonstration](demo-scenarios.md).
 
 ```powershell
 npm run n8n:qualification:test

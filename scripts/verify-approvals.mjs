@@ -1,8 +1,8 @@
 import {createClient} from "@supabase/supabase-js";
 import {randomUUID} from "node:crypto";
-import {readFile} from "node:fs/promises";
+import {executeTestWorkflow} from "./n8n-test-workflows.mjs";
 import assert from "node:assert/strict";
-import {container,inside,docker} from "./n8n-tools.mjs";
+import {container,inside,docker,assertSchedulersPaused} from "./n8n-tools.mjs";
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
 if(!url||!["localhost","127.0.0.1","[::1]"].includes(new URL(url).hostname))throw new Error("Test réservé à Supabase local.");
 const admin=createClient(url,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
@@ -10,28 +10,7 @@ const user=createClient(url,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,{au
 const suffix=randomUUID().slice(0,8);
 const workflowIds=["advanceTest"+suffix,"notifyTest"+suffix];
 let userId;
-async function execute(workflowName,id,requestId,model){
- const workflow=JSON.parse(await readFile("n8n/workflows/"+workflowName+".json","utf8"));
- workflow.id=id;workflow.name="TEST NovaCorp "+id;workflow.active=false;
- workflow.nodes=workflow.nodes.filter(node=>node.type!=="n8n-nodes-base.scheduleTrigger");
- delete workflow.connections["Toutes les minutes"];
- const assignments=workflow.nodes.find(node=>node.name==="Configuration").parameters.assignments.assignments;
- assignments.find(field=>field.name==="request_id").value=requestId;
- if(model)assignments.find(field=>field.name==="model").value=model;
- return inside(container(),`
- const fs=require("node:fs"),os=require("node:os"),path=require("node:path"),cp=require("node:child_process");
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),"novacorp-verify-"));
- try{
-  const workflow=JSON.parse(fs.readFileSync(0,"utf8")),file=path.join(dir,"workflow.json");
-  fs.writeFileSync(file,JSON.stringify([workflow]),{mode:0o600});
-  cp.execFileSync("n8n",["import:workflow","--input",file],{stdio:"pipe"});
-  try{
-   cp.execFileSync("n8n",["execute","--id",workflow.id],{stdio:"pipe",env:{...process.env,N8N_RUNNERS_BROKER_PORT:"56790"},timeout:170000,maxBuffer:8*1024*1024});
-   console.log("success");
-  }catch{console.log("failed");}
- }finally{fs.rmSync(dir,{recursive:true,force:true});}
- `,JSON.stringify(workflow)).trim();
-}
+const execute=(name,id,requestId,model)=>executeTestWorkflow(name,id,requestId,model,workflowIds);
 async function messages(){
  const r=await fetch("http://127.0.0.1:8025/api/v2/messages?limit=200",{signal:AbortSignal.timeout(10000)});
  assert.ok(r.ok);return (await r.json()).items||[];
@@ -44,6 +23,7 @@ const decide=async(id,position,approve)=>{
  sql("begin; set local role authenticated; set local request.jwt.claims='"+JSON.stringify({sub:step.assignee_id,role:"authenticated"})+"'; select public.decide_hr_approval('"+step.id+"',"+approve+",'Vérification fictive'); commit;");
 };
 const qualify=async id=>{
+ if(process.argv.includes("--real-llm")){const wid="qual"+suffix;if(!workflowIds.includes(wid))workflowIds.push(wid);assert.equal(await execute("qualification",wid,id),"success");return;}
  const claim=await admin.rpc("claim_hr_qualification",{p_execution_id:"approval-test-"+randomUUID(),p_provider:"test",p_model:"fixture",p_request_id:id});assert.equal(claim.error,null);
  const done=await admin.rpc("complete_hr_qualification",{p_run_id:claim.data.run_id,p_lease_token:claim.data.lease_token,p_result:{qualification:"eligible",summary:"Fixture : test après qualification",response_draft:"Attente décision humaine"}});
  assert.equal(done.error,null);assert.equal(done.data.completed,true);
@@ -62,7 +42,7 @@ const notify=async(id,kind)=>{
 };
 try{
  const published=inside(container(),"const {DatabaseSync}=require(\"node:sqlite\");const db=new DatabaseSync(\"/home/node/.n8n/database.sqlite\");try{console.log(JSON.stringify(db.prepare(\"SELECT id FROM workflow_entity WHERE id IN (?,?,?,?,?,?,?,?,?) AND activeVersionId IS NOT NULL\").all(\"novacorpQualification\",\"novacorpManagerEmails\",\"novacorpApprovals\",\"novacorpNotifications\",\"novacorpReminders\",\"novacorpManagerReminders\",\"novacorpWeeklyDigest\",\"novacorpDigestEmails\",\"novacorpOnboarding\")));}finally{db.close();}");
- assert.equal(JSON.parse(published).length,0,"Dépubliez qualification, validations, supervision, digests et onboarding avant ce test.");
+ assertSchedulersPaused(JSON.parse(published));
  const email="approvals-"+suffix+"@novacorp.test";
  const created=await admin.auth.admin.createUser({email,password:"QualificationDemo2026!",email_confirm:true});
  assert.equal(created.error,null);userId=created.data.user.id;
@@ -127,6 +107,8 @@ try{
  try{
   db.exec("PRAGMA foreign_keys=ON; PRAGMA busy_timeout=10000; BEGIN;");
   for(const id of JSON.parse(require("node:fs").readFileSync(0,"utf8"))){
+   db.prepare("UPDATE workflow_entity SET active=0,activeVersionId=null WHERE id=?").run(id);
+   db.prepare("DELETE FROM workflow_published_version WHERE workflowId=?").run(id);
    db.prepare("DELETE FROM execution_entity WHERE workflowId = ?").run(id);
    db.prepare("DELETE FROM workflow_entity WHERE id = ?").run(id);
   }

@@ -31,6 +31,7 @@ set local role service_role;
 select throws_ok($$select claim_hr_qualification(null,'ollama','qwen3:1.7b')$$,'23514',null,'identifiant exécution obligatoire');
 insert into qualification_test_state values('first',claim_hr_qualification('first','ollama','qwen3:1.7b','23000000-0000-0000-0000-000000000001'));
 select is((select (data->>'claimed')::boolean from qualification_test_state where key='first'),true,'demande réservée');
+select is((select prompt_version from ai_reviews where request_id='23000000-0000-0000-0000-000000000001'),'hr-qualification-v2','nouvelle revue liee au prompt actif v2');
 select is((select status::text from requests where id='23000000-0000-0000-0000-000000000001'),'under_review','passage en analyse atomique');
 select is((claim_hr_qualification('other','ollama','qwen3:1.7b','23000000-0000-0000-0000-000000000001')->>'claimed')::boolean,false,'deuxième qualification exclue');
 select ok(not (select data->'request' ? 'requester_id' from qualification_test_state where key='first'),'identité du salarié exclue du prompt');
