@@ -34,7 +34,9 @@ async function login(page:Page){
 }
 for(const kind of ["leave","remote_work","equipment","training"]){
  test("brouillon, modification, soumission et annulation : "+kind,async({page})=>{
- await login(page);await page.getByRole("link",{name:"Nouvelle demande"}).click();
+ await login(page);await page.getByRole("main").getByRole("link",{name:"Nouvelle demande"}).click();
+ await expect(page).toHaveURL(/\/demandes\/nouvelle$/);
+ await expect(page.getByLabel("Titre",{exact:false})).toBeVisible();
  await page.getByLabel("Type de demande").selectOption(kind);
  const title="Interface "+kind;
  await page.getByLabel("Titre", {exact:false}).fill(title);
@@ -82,7 +84,8 @@ test("un solde insuffisant conserve un seul brouillon et les champs saisis",asyn
 test("filtres, isolation d’un brouillon et formulaire mobile",async({page,browser})=>{
  const fixture=await client.from("requests").insert({title:"Filtre annulation",request_type:"equipment",requester_id:userId}).select("id").single();expect(fixture.error).toBeNull();expect((await client.rpc("cancel_hr_request",{p_request_id:fixture.data!.id})).error).toBeNull();
  await login(page);await page.getByLabel("Statut",{exact:true}).selectOption("cancelled");
- await page.getByRole("button",{name:"Filtrer",exact:true}).click();
+ await expect(page).toHaveURL(/status=cancelled/);
+ await expect(page.locator(".request-card .status:not(.status-cancelled)")).toHaveCount(0);
  await expect(page.getByRole("heading",{name:"Filtre annulation",exact:true})).toBeVisible();for(const badge of await page.locator(".request-card .status").all())await expect(badge).toHaveText("Annulée");
  const {data:draft,error}=await client.from("requests").insert({title:"Brouillon privé",request_type:"equipment",requester_id:userId}).select("id").single();expect(error).toBeNull();
  const other=await browser.newContext();const outsider=await other.newPage();
@@ -109,6 +112,9 @@ for(const approve of [true,false]){
  const managerContext=await browser.newContext();const managerPage=await managerContext.newPage();
  try{
  await managerPage.goto("/connexion");await managerPage.getByLabel("Adresse email professionnelle").fill("manager@novacorp.test");await managerPage.getByLabel("Mot de passe",{exact:true}).fill(password);await managerPage.getByRole("button",{name:"Se connecter",exact:true}).click();await expect(managerPage).toHaveURL(/\/tableau-de-bord$/);
+ await managerPage.getByRole("navigation",{name:"Navigation de l’espace"}).getByRole("link",{name:"Mon équipe",exact:true}).click();
+ await expect(managerPage.getByRole("heading",{name:"Demandes de mon équipe",exact:true})).toBeVisible();
+ await expect(managerPage.getByRole("navigation",{name:"Navigation de l’espace"}).getByRole("link",{name:"Mon équipe",exact:true})).toHaveAttribute("aria-current","page");
  await managerPage.goto("/tableau-de-bord/demandes/"+id);
  await expect(managerPage.getByText("Synthèse fictive du test navigateur",{exact:true})).toBeVisible();
  if(!approve){
@@ -126,3 +132,42 @@ for(const approve of [true,false]){
  }finally{await managerContext.close();}
  });
 }
+
+test("pagination, filtres immédiats et retour navigateur",async({page})=>{
+ const rows=Array.from({length:25},(_,index)=>({requester_id:userId,request_type:"training",title:"Pagination formation "+index}));
+ const created=await client.from("requests").insert(rows).select("id");expect(created.error).toBeNull();
+ try {
+  await login(page);
+  await expect(page.getByRole("navigation",{name:"Navigation de l’espace"}).getByRole("link",{name:"Mes demandes",exact:true})).toHaveAttribute("aria-current","page");
+  await page.getByLabel("Type de demande",{exact:true}).selectOption("training");
+  await expect(page).toHaveURL(/type=training/);
+  await page.getByLabel("Statut",{exact:true}).selectOption("draft");
+  await expect(page).toHaveURL(/status=draft/);
+  await expect(page.getByRole("button",{name:"Filtrer",exact:true})).toHaveCount(0);
+  await expect(page.locator(".request-card")).toHaveCount(5);
+  const firstTitles=await page.locator(".request-card h3").allTextContents();
+  const pagination=page.getByRole("navigation",{name:"Pagination",exact:true});
+  await pagination.getByRole("link",{name:"Page suivante",exact:true}).click();
+  await expect(page).toHaveURL(/page=2/);
+  await expect(page.locator(".request-card")).toHaveCount(5);
+  expect((await page.locator(".request-card h3").allTextContents()).some(title=>firstTitles.includes(title))).toBe(false);
+  await expect(page.getByLabel("Type de demande",{exact:true})).toHaveValue("training");
+  await page.getByLabel("Statut",{exact:true}).selectOption("cancelled");
+  await expect(page).toHaveURL(/status=cancelled/);
+  expect(new URL(page.url()).searchParams.has("page")).toBe(false);
+  await expect(pagination).toContainText("Page 1 sur 1");
+  for(const badge of await page.locator(".request-card .status").all())await expect(badge).toHaveText("Annulée");
+  await page.goBack();
+  await expect(page.getByLabel("Statut",{exact:true})).toHaveValue("draft");
+  await expect(page.locator(".request-card")).toHaveCount(5);
+  await page.goto("/tableau-de-bord?type=training&status=draft&page=9999");
+  await expect(pagination).toContainText("Page 5 sur 5");
+  await expect(page.locator(".request-card")).toHaveCount(5);
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.screenshot({path:"test-results/navigation-pagination-mobile.png",fullPage:true});
+ } finally {
+  // Only the disposable test user's drafts created above.
+  execFileSync("docker",["exec","-i","supabase_db_NovaCorp","psql","-U","supabase_admin","-d","postgres","-v","ON_ERROR_STOP=1"],{input:"delete from public.requests where requester_id='"+userId+"' and id in ("+(created.data||[]).map(row=>"'"+row.id+"'").join(",")+");",encoding:"utf8"});
+ }
+});

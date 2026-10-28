@@ -1,8 +1,8 @@
 # Supervision RH
 
-La page **/tableau-de-bord/supervision**, accessible depuis le menu pour les RH et la DRH, suit toutes les demandes soumises, y compris leurs demandes personnelles. Les brouillons et les annulations sans soumission sont exclus. Le filtre de type s'applique à l'ensemble des compteurs, répartitions et listes.
+La page **/tableau-de-bord/supervision**, accessible depuis le menu pour les RH et la DRH, suit toutes les demandes soumises, y compris leurs demandes personnelles. Les brouillons et les annulations sans soumission sont exclus. Les filtres de type et de statut s'appliquent automatiquement dès leur sélection à l'ensemble des compteurs, répartitions et listes.
 
-La RPC `get_hr_dashboard(text)` utilise la session utilisateur, les permissions RLS existantes et un contrôle du rôle en base. Elle ne donne accès ni au manager, ni au salarié, ni au visiteur, ni à une clé service utilisée directement. Aucune clé d'administration n'est utilisée par la page.
+La RPC `get_hr_dashboard_page(text, request_status, integer, integer, integer)` utilise la session utilisateur, les permissions RLS existantes et un contrôle du rôle en base. Ses trois paramètres de page concernent respectivement les validations, incidents et demandes en attente. La RPC historique `get_hr_dashboard(text)` conserve son aperçu historique de 20 éléments pour les intégrations existantes. Elle ne donne accès ni au manager, ni au salarié, ni au visiteur, ni à une clé service utilisée directement. Aucune clé d'administration n'est utilisée par la page.
 
 ## Indicateurs
 
@@ -12,7 +12,7 @@ La RPC `get_hr_dashboard(text)` utilise la session utilisateur, les permissions 
 - répartition par statut et par type ;
 - délai moyen et médian de la soumission à la décision finale pour les demandes approuvées ou refusées. Les annulations et les demandes encore en cours sont exclues de ces délais.
 
-Les agrégats sont calculés en SQL sur toutes les lignes accessibles, indépendamment de la limite de chargement des listes Supabase. Ils correspondent à toute la période disponible, sans fenêtre implicite. Les validations, incidents et demandes en attente affichent chacun leurs 20 premiers éléments, avec les compteurs complets et un lien vers les fiches. Les validations et demandes les plus anciennes sont prioritaires. Les dates sont affichées à l'heure de Paris.
+Les agrégats sont calculés en SQL sur toutes les lignes accessibles correspondant aux filtres, indépendamment de la pagination. Ils correspondent à toute la période disponible, sans fenêtre implicite. Les validations, incidents et demandes en attente disposent chacun d'une pagination indépendante de 5 éléments, avec les compteurs complets et un lien vers les fiches. Changer de page conserve les filtres et les pages des autres listes ; changer un filtre remet les trois listes en première page. Les pages sont bornées en SQL, y compris si les données changent. Les validations et demandes les plus anciennes sont prioritaires. Les dates sont affichées à l'heure de Paris.
 
 Pour chaque demande et automatisation, seule la dernière exécution est examinée : un échec suivi d'une réussite n'est plus un incident. Les traitements échoués des demandes clôturées ne sont pas comptés. Pour les emails, les notifications de statut restent pertinentes après clôture ; les notifications de validation, relance ou alerte devenues obsolètes sont exclues.
 
@@ -20,7 +20,7 @@ Les messages d'incident sont génériques : les détails techniques et les secre
 
 ## Actualisation et vérification
 
-La page se rafraîchit lors des changements Realtime de demande, validation et notification, au retour sur la fenêtre et toutes les dix secondes tant qu'elle est visible. Ce rafraîchissement de secours actualise aussi les incidents et le passage des échéances. Le bouton Actualiser permet une mise à jour manuelle. Une panne de chargement affiche un message d'erreur sans présenter de faux compteurs à zéro.
+La page se rafraîchit lors des changements Realtime de demande, validation et notification, au retour sur la fenêtre et toutes les dix secondes tant qu'elle est visible. Ce rafraîchissement de secours actualise aussi les incidents et le passage des échéances, en conservant les filtres et les pages. Une panne de chargement affiche un message d'erreur sans présenter de faux compteurs à zéro.
 
 ```powershell
 npm run db:migrate
