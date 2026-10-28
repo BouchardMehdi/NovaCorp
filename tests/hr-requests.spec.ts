@@ -10,8 +10,12 @@ test.beforeAll(async()=>{
  email="ui-"+randomUUID()+"@novacorp.test";
  const {data,error}=await admin.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{first_name:"Test",last_name:"Interface"}});
  expect(error).toBeNull();userId=data.user!.id;
- const {data:manager}=await admin.from("profiles").select("id").eq("role","manager").limit(1).single();
- expect((await admin.from("profiles").update({manager_id:manager!.id}).eq("id",userId)).error).toBeNull();
+ const managerClient=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,{auth:{persistSession:false,autoRefreshToken:false}});
+ const manager=await managerClient.auth.signInWithPassword({email:"manager@novacorp.test",password});
+ expect(manager.error).toBeNull();
+ const managerId=manager.data.user!.id;
+ await managerClient.auth.signOut({scope:"local"});
+ expect((await admin.from("profiles").update({manager_id:managerId}).eq("id",userId)).error).toBeNull();
  expect((await admin.from("leave_balances").insert({employee_id:userId,year:2026,allocated_days:25})).error).toBeNull();
  expect((await client.auth.signInWithPassword({email,password})).error).toBeNull();
 });
