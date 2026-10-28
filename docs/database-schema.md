@@ -1,5 +1,7 @@
 # Schéma de données NovaCorp
 
+Le [RAG documentaire RH](rag.md) ajoute un import administrateur MD/TXT/PDF textuel, une recherche PostgreSQL et des citations visibles dans les revues. Les nouvelles qualifications utilisent le prompt `hr-qualification-v3-rag`.
+
 Cette base couvre le socle de la plateforme RH décrit dans le **Fil Rouge - Automatisation - Plateforme RH.pdf**, pages 1 à 3 : quatre types de demandes, routage manager → RH → DRH selon les seuils, contrôle IA, décisions tracées, notifications, supervision et mesure des délais. Les workflows n8n et les écrans seront développés séparément.
 
 Le PDF ne donne ni la liste détaillée des champs de formulaire, ni les seuils chiffrés, ni les délais de décision et de relance. Les champs ci-dessous sont des choix de modélisation ; les valeurs métier ont ensuite été [validées par l’équipe](business-rules.md). Les pièces jointes sont possibles, sans être obligatoires. Leur analyse par l'IA, présentée comme un bonus dans le document, n'est pas implémentée.

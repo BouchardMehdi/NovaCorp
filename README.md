@@ -28,6 +28,7 @@ Projet fil rouge **M1 DFS · Ingénierie de l'automatisation**. Une demande suit
 | Fonction | Comportement |
 | --- | --- |
 | Demandes RH | Congés, télétravail, matériel et formation ; brouillon, modification, soumission, suivi et annulation |
+| RAG documentaire | Import MD/TXT/PDF textuel, recherche française dans les versions actives, synthèse avec citations et extraits visibles au validateur |
 | Navigation et listes | Menu adapté au rôle, page active, filtres immédiats de vue/type/statut et pagination de 5 demandes ; affichage mobile |
 | S1 — Notification manager | Qualification de la demande, activation du manager assigné et email dans MailHog |
 | S2 — Approbation multi-niveaux | Manager puis RH ; DRH au-delà d'un seuil ; décisions et changements de statut historisés |
@@ -37,7 +38,7 @@ Projet fil rouge **M1 DFS · Ingénierie de l'automatisation**. Une demande suit
 | S5 — Onboarding | Nouveau profil : bienvenue personnalisée et checklist de six étapes du premier jour, sans renvoi lors d'une mise à jour |
 | Supervision RH/DRH | Volumes, statuts, délais moyen/médian, validations en retard et incidents ; filtres immédiats et trois listes paginées indépendantes ; actualisation Realtime et rafraîchissement de secours |
 
-Les pièces jointes privées sont modélisées et protégées en base/Storage ; leur dépôt et leur analyse ne sont pas exposés dans le front. Pas de chatbot, RAG, export PDF/Excel ou emails Slack. MailHog reçoit les emails de démonstration ; la récupération de mot de passe et les emails Supabase Auth ne sont pas configurés.
+Les pièces jointes privées des demandes sont modélisées et protégées en base/Storage ; leur dépôt et leur analyse ne sont pas exposés dans le front. Le [RAG documentaire](docs/rag.md) porte sur des documents RH importés par l'administrateur, avec un corpus initial de démonstration. Pas de chatbot, export PDF/Excel ou emails Slack. MailHog reçoit les emails de démonstration ; la récupération de mot de passe et les emails Supabase Auth ne sont pas configurés.
 
 <a id="architecture"></a>
 ## Architecture et choix techniques
@@ -47,6 +48,9 @@ flowchart LR
   U[Salarié / Manager / RH / DRH] --> F[Next.js · React · TypeScript]
   F --> S[Supabase local : Auth · PostgreSQL · RLS · Realtime]
   S --> N[n8n : circuit déterministe et file de notifications]
+  D[Documents RH importés : MD / TXT / PDF textuels] --> K[Supabase : versions et index textuel français]
+  N --> K
+  K --> A
   N --> A[Sous-workflow de qualification IA sans clé de base]
   A --> O[API Ollama · Qwen3 1.7B]
   O --> A
@@ -86,6 +90,7 @@ npm run local:env
 npm run db:migrate
 npm run auth:seed
 npm run business:seed
+npm run rag:seed
 npm run llm:start
 npm run llm:pull
 npm run n8n:start
@@ -212,11 +217,20 @@ Chaque étape dispose de 48 h calendaires à partir de son activation. S3 prépa
 <a id="ia"></a>
 ## Qualification IA et validation humaine
 
-Le parent n8n réserve la demande et obtient ses contrôles SQL. Il retire les identités structurées, identifiants privés et jetons avant d'appeler le sous-workflow. Ce dernier n'a aucun identifiant Supabase, aucun outil d'écriture et aucune URL choisie par le modèle. Il appelle uniquement Ollama, puis valide une sortie JSON fermée : qualification, synthèse, brouillon de réponse.
+Le parent n8n réserve la demande et obtient ses contrôles SQL. Après minimisation des données, il recherche trois extraits dans les documents RH actifs du type concerné. Il conserve leurs versions et leur contenu dans un instantané avant d'appeler le sous-workflow. Ce dernier n'a aucun identifiant Supabase, aucun outil d'écriture et aucune URL choisie par le modèle. Il appelle uniquement Ollama, puis valide une sortie JSON fermée : qualification, synthèse, brouillon de réponse et citations. Les extraits sont visibles sur la fiche du validateur.
 
 Les faits SQL priment sur la proposition du modèle. Les emails/UUID/téléphones reconnaissables sont masqués dans le texte ; cela ne garantit pas l'anonymisation de tout texte libre. Le modèle peut se tromper. Manager, RH et DRH prennent les décisions métier ; les écritures automatiques concernent les traces et la préparation du circuit. Le brouillon IA n'est pas envoyé automatiquement au salarié.
 
-Prompt actif : **`hr-qualification-v2`**. Les prompts, le schéma, la politique et les descriptions des RPC autorisées sont versionnés. Consulter [le contrat IA et les tests N1–N5](docs/ai-governance.md). Les N1–N5 sont propres au projet et ne sont pas présentés comme les T1–T5 officiels du cours, dont la définition doit encore être rapprochée.
+Prompt actif : **`hr-qualification-v3-rag`**, estampillé lors de la recherche documentaire effective. Les prompts, le schéma, la politique et les descriptions des RPC autorisées sont versionnés. Consulter [le contrat IA et les tests N1–N5](docs/ai-governance.md). Les N1–N5 sont propres au projet et ne sont pas présentés comme les T1–T5 officiels du cours, dont la définition doit encore être rapprochée.
+
+Le RAG utilise une recherche textuelle française PostgreSQL, sans embeddings ni modèle supplémentaire. Le premier corpus reprend les règles de démonstration NovaCorp. Pour ajouter tes propres documents MD/TXT/PDF textuels :
+
+```powershell
+npm run rag:import -- --file "rag/inbox/politique-conges.pdf" --slug politique-conges --title "Politique des congés" --version 1 --types leave
+npm run rag:verify
+```
+
+L'import devient disponible pour les nouvelles qualifications. Une mise à jour conserve le slug et augmente `--version`. Les scans nécessitent un OCR préalable. Voir [formats, commandes, permissions et limites](docs/rag.md). Une absence de sources/citations impose une vérification humaine ; une citation inconnue est rejetée. Un document ne modifie jamais les règles SQL.
 
 <a id="demonstration"></a>
 ## Démonstration S1–S5
@@ -344,6 +358,7 @@ compose.ngrok.yaml           Tunnel optionnel vers n8n
 | [Digest](docs/n8n-weekly-digest.md) | Semaine de référence et file SMTP |
 | [Onboarding](docs/n8n-onboarding.md) | Bienvenue et checklist |
 | [Supervision](docs/hr-dashboard.md) | Compteurs et incidents |
+| [RAG documentaire](docs/rag.md) | Importer des documents, versionner et expliquer les citations |
 | [Interface](docs/hr-interface.md) | Formulaires, vues et actions |
 | [Données fictives](docs/demo-data.md) | Jeu d'Emma et historiques simulés |
 | [Ngrok / webhook](docs/ngrok-webhook.md) | Destination autorisée, payload minimal et Vault |

@@ -1,0 +1,7 @@
+[
+ {"file":"validation.md","slug":"nc-validation","title":"Circuit de validation NovaCorp (démonstration)","version":"1","types":["leave","remote_work","equipment","training"]},
+ {"file":"conges.md","slug":"nc-conges","title":"Congés NovaCorp (démonstration)","version":"1","types":["leave"]},
+ {"file":"teletravail.md","slug":"nc-teletravail","title":"Télétravail NovaCorp (démonstration)","version":"1","types":["remote_work"]},
+ {"file":"materiel.md","slug":"nc-materiel","title":"Matériel NovaCorp (démonstration)","version":"1","types":["equipment"]},
+ {"file":"formation.md","slug":"nc-formation","title":"Formation NovaCorp (démonstration)","version":"1","types":["training"]}
+]

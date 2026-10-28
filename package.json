@@ -67,9 +67,13 @@
     "n8n:onboarding:start": "node scripts/manage-onboarding-workflow.mjs start",
     "n8n:onboarding:stop": "node scripts/manage-onboarding-workflow.mjs stop",
     "n8n:onboarding:verify": "node --env-file=.env.local scripts/verify-onboarding.mjs",
-    "ai:test": "node --test tests/qualification.unit.mjs tests/ai-policy.unit.mjs",
+    "ai:test": "node --test tests/qualification.unit.mjs tests/ai-policy.unit.mjs tests/rag.unit.mjs",
     "ai:verify": "node scripts/verify-ai-policy.mjs",
-    "demo:verify": "node scripts/demo-verify.mjs"
+    "demo:verify": "node scripts/demo-verify.mjs",
+    "rag:seed": "node --env-file=.env.local scripts/rag-import.mjs --seed",
+    "rag:import": "node --env-file=.env.local scripts/rag-import.mjs",
+    "rag:test": "node --test tests/rag.unit.mjs",
+    "rag:verify": "node --env-file=.env.local scripts/verify-rag.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
@@ -86,6 +90,7 @@
     "@types/react-dom": "19.3.0",
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.3",
+    "pdf-parse": "2.4.5",
     "supabase": "2.120.0",
     "typescript": "6.0.3"
   }

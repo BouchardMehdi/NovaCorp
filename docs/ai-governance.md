@@ -1,12 +1,15 @@
 # Pilotage de la qualification IA
 
+Le [RAG documentaire RH](rag.md) ajoute un import administrateur MD/TXT/PDF textuel, une recherche PostgreSQL et des citations visibles dans les revues. Les nouvelles qualifications utilisent le prompt `hr-qualification-v3-rag`.
+
 ## Frontière de confiance
 
 ```mermaid
 flowchart LR
   A[Demande soumise] --> B[Parent n8n : réserver et lire les contrôles SQL]
   B --> C[Liste blanche et minimisation]
-  C --> D[Sous-workflow IA sans identifiants de base]
+  C --> R[Parent : recherche documentaire et instantané des sources]
+  R --> D[Sous-workflow IA sans identifiants de base]
   D --> E[Ollama local : proposition JSON]
   E --> F[Validation stricte et politique déterministe]
   F --> G[Parent : enregistrer avec le jeton de réservation]
@@ -21,8 +24,8 @@ Seul `novacorpQualification` est autorisé à appeler ce sous-workflow via `call
 
 | Composant | Autorisé | Non disponible pour le modèle |
 | --- | --- | --- |
-| Contrat d'entrée | `operation=qualify`, un type RH reconnu, les champs utiles de la demande, les résultats agrégés des contrôles | Identité structurée, identifiants de demande/salarié/doublon, jeton de réservation, URL d'outil, clé de base |
-| Sortie IA | `qualification` dans `eligible / needs_review / invalid`, `summary`, `response_draft` | SQL, statut final, décision, nom d'outil ou champ supplémentaire |
+| Contrat d'entrée | `operation=qualify`, un type RH reconnu, les champs utiles de la demande, les résultats agrégés des contrôles et trois extraits documentaires bornés | Identité structurée, identifiants de demande/salarié/doublon, jeton de réservation, URL d'outil, clé de base |
+| Sortie IA | `qualification` dans `eligible / needs_review / invalid`, `summary`, `response_draft`, `citations` limitées aux extraits fournis | SQL, statut final, décision, nom d'outil ou champ supplémentaire |
 | Parent déterministe | RPC de réservation, de contrôles, d'enregistrement et d'échec, avec leurs descriptions ci-dessous | Toute sélection d'outil ou de destinataire à partir du texte généré |
 | Validateur humain | Accepter ou refuser l'étape qui lui est assignée dans l'interface | Décider pour un autre validateur ou s'auto-approuver |
 
@@ -32,7 +35,7 @@ Les payloads des exécutions réussies ne sont pas conservés par défaut dans l
 
 ## Prompts et descriptions versionnés
 
-- Prompt actif : **`hr-qualification-v2`**, défini dans `n8n/lib/qualification.mjs`, avec la version exportée dans `n8n/lib/ai-policy.mjs` et inscrite dans les nouvelles revues par migration.
+- Prompt actif : **`hr-qualification-v3-rag`**, défini dans `n8n/lib/qualification.mjs`, avec la version exportée dans `n8n/lib/ai-policy.mjs`. La recherche documentaire avec un jeton valide estampille la revue v3 ; la réservation seule reste v2 pour compatibilité avec les fixtures techniques.
 - Historique v1 : conservé dans Git et dans les revues existantes ; aucune réécriture des anciennes traces.
 - Schéma, minimisation et politique : versionnés dans Git et incorporés aux workflows par le générateur. Après modification, reconstruire et réimporter les workflows ; une modification du fichier source seule ne change pas n8n.
 
@@ -41,6 +44,7 @@ Les opérations ci-dessous sont des RPC choisies par le parent, **pas des outils
 | RPC | Description et limite |
 | --- | --- |
 | `claim_hr_qualification` | Réserve une seule demande, lit ses contrôles déterministes et produit un jeton backend. Pas de décision finale. |
+| `retrieve_hr_knowledge` | Vérifie la réservation, recherche les documents actifs du type réel de la demande et fige les extraits. Le sous-workflow n'a jamais les droits d'appeler cette RPC. |
 | `complete_hr_qualification` | Valide le jeton et les champs, enregistre la revue et active le manager ; les anomalies SQL priment sur le modèle. |
 | `fail_hr_qualification` | Enregistre un code générique et une reprise limitée ; aucune décision ni activation sur échec. |
 | `decide_hr_approval` | Action séparée du validateur authentifié, soumise aux règles métier. Jamais exposée au sous-workflow IA. |
@@ -70,4 +74,4 @@ npm run db:verify
 
 ## Limites assumées
 
-Le modèle peut produire une synthèse erronée ou trompeuse ; le validateur doit la relire. Les consignes ne remplacent pas les permissions, le schéma fermé et les contrôles SQL. Le modèle ne consulte ni convention collective, ni dossier d'un autre salarié, ni pièce jointe. Les brouillons de réponse ne sont pas envoyés automatiquement. Les captures et rapports doivent rester fictifs et ne contenir aucun secret.
+Le modèle peut produire une synthèse erronée ou trompeuse ; le validateur doit la relire. Les consignes ne remplacent pas les permissions, le schéma fermé et les contrôles SQL. Le modèle consulte uniquement les extraits du corpus administrateur retrouvés par le parent, jamais un dossier salarié ou une pièce jointe de demande. Le corpus initial ne contient aucune convention collective. Les brouillons de réponse ne sont pas envoyés automatiquement. Les captures et rapports doivent rester fictifs et ne contenir aucun secret.

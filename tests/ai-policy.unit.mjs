@@ -50,7 +50,7 @@ test("le sous-workflow publie ne possede aucun identifiant de base ni outil d'ec
  const http=child.nodes.filter(n=>n.type==="n8n-nodes-base.httpRequest");assert.equal(http.length,1);
  assert.equal(http[0].parameters.url,"http://ollama:11434/api/chat");
  assert.equal(child.nodes.some(n=>/webhook|schedule|supabase|postgres/i.test(n.type)),false);
- assert.equal(promptVersion,"hr-qualification-v2");
+ assert.equal(promptVersion,"hr-qualification-v3-rag");
  const names=new Set(child.nodes.map(n=>n.name));for(const [source,outputs] of Object.entries(child.connections)){
   assert.ok(names.has(source));for(const group of outputs.main)for(const edge of group)assert.ok(names.has(edge.node));
  }

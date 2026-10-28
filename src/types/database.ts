@@ -8,14 +8,14 @@ export type Database = {
           Tables: {
             "ai_reviews": {
                   Row: {
-                    "checks": NonNullable<Json>,"cost_amount": number,"cost_currency": string,"error_code": string | null,"error_message": string | null,"finished_at": string | null,"id": string,"input_tokens": number,"model": string,"output_tokens": number,"prompt_version": string,"provider": string,"qualification": Database["public"]['Enums']["ai_qualification"] | null,"request_id": string,"response_draft": string | null,"started_at": string,"status": Database["public"]['Enums']["execution_status"],"summary": string | null,"workflow_run_id": string | null
+                    "checks": NonNullable<Json>,"cost_amount": number,"cost_currency": string,"error_code": string | null,"error_message": string | null,"finished_at": string | null,"id": string,"input_tokens": number,"model": string,"output_tokens": number,"prompt_version": string,"provider": string,"qualification": Database["public"]['Enums']["ai_qualification"] | null,"rag_context": Json | null,"request_id": string,"response_draft": string | null,"started_at": string,"status": Database["public"]['Enums']["execution_status"],"summary": string | null,"workflow_run_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "checks"?: NonNullable<Json>,"cost_amount"?: number,"cost_currency"?: string,"error_code"?: string | null,"error_message"?: string | null,"finished_at"?: string | null,"id"?: string,"input_tokens"?: number,"model": string,"output_tokens"?: number,"prompt_version": string,"provider": string,"qualification"?: Database["public"]['Enums']["ai_qualification"] | null,"request_id": string,"response_draft"?: string | null,"started_at"?: string,"status"?: Database["public"]['Enums']["execution_status"],"summary"?: string | null,"workflow_run_id"?: string | null
+                    "checks"?: NonNullable<Json>,"cost_amount"?: number,"cost_currency"?: string,"error_code"?: string | null,"error_message"?: string | null,"finished_at"?: string | null,"id"?: string,"input_tokens"?: number,"model": string,"output_tokens"?: number,"prompt_version": string,"provider": string,"qualification"?: Database["public"]['Enums']["ai_qualification"] | null,"rag_context"?: Json | null,"request_id": string,"response_draft"?: string | null,"started_at"?: string,"status"?: Database["public"]['Enums']["execution_status"],"summary"?: string | null,"workflow_run_id"?: string | null
                   }
                   Update: {
-                    "checks"?: NonNullable<Json>,"cost_amount"?: number,"cost_currency"?: string,"error_code"?: string | null,"error_message"?: string | null,"finished_at"?: string | null,"id"?: string,"input_tokens"?: number,"model"?: string,"output_tokens"?: number,"prompt_version"?: string,"provider"?: string,"qualification"?: Database["public"]['Enums']["ai_qualification"] | null,"request_id"?: string,"response_draft"?: string | null,"started_at"?: string,"status"?: Database["public"]['Enums']["execution_status"],"summary"?: string | null,"workflow_run_id"?: string | null
+                    "checks"?: NonNullable<Json>,"cost_amount"?: number,"cost_currency"?: string,"error_code"?: string | null,"error_message"?: string | null,"finished_at"?: string | null,"id"?: string,"input_tokens"?: number,"model"?: string,"output_tokens"?: number,"prompt_version"?: string,"provider"?: string,"qualification"?: Database["public"]['Enums']["ai_qualification"] | null,"rag_context"?: Json | null,"request_id"?: string,"response_draft"?: string | null,"started_at"?: string,"status"?: Database["public"]['Enums']["execution_status"],"summary"?: string | null,"workflow_run_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -101,6 +101,60 @@ isOneToOne: false
       columns: ["employee_id"]
 isOneToOne: true
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"hr_knowledge_chunks": {
+                  Row: {
+                    "content": string,"document_id": string,"id": string,"position": number,"search_vector": unknown,"section": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "content": string,"document_id": string,"id"?: string,"position": number,"search_vector"?: never,"section": string
+                  }
+                  Update: {
+                    "content"?: string,"document_id"?: string,"id"?: string,"position"?: number,"search_vector"?: never,"section"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "hr_knowledge_chunks_document_id_fkey"
+      columns: ["document_id"]
+isOneToOne: false
+      referencedRelation: "hr_knowledge_documents"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"hr_knowledge_documents": {
+                  Row: {
+                    "active": boolean,"id": string,"imported_at": string,"request_types": (string)[],"sha256": string,"slug": string,"source_path": string,"title": string,"version": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "active"?: boolean,"id"?: string,"imported_at"?: string,"request_types": (string)[],"sha256": string,"slug": string,"source_path": string,"title": string,"version": string
+                  }
+                  Update: {
+                    "active"?: boolean,"id"?: string,"imported_at"?: string,"request_types"?: (string)[],"sha256"?: string,"slug"?: string,"source_path"?: string,"title"?: string,"version"?: string
+                  }
+                  Relationships: [
+
+                  ]
+                },"hr_knowledge_retrievals": {
+                  Row: {
+                    "context": NonNullable<Json>,"created_at": string,"id": string,"workflow_run_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "context": NonNullable<Json>,"created_at"?: string,"id"?: string,"workflow_run_id": string
+                  }
+                  Update: {
+                    "context"?: NonNullable<Json>,"created_at"?: string,"id"?: string,"workflow_run_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "hr_knowledge_retrievals_workflow_run_id_fkey"
+      columns: ["workflow_run_id"]
+isOneToOne: true
+      referencedRelation: "workflow_runs"
       referencedColumns: ["id"]
     }
                   ]
@@ -551,10 +605,13 @@ isOneToOne: false
 { Args: { "p_request_type"?: string }; Returns: Json
                            },
 "get_hr_dashboard_page":
-{ Args: { "p_request_type"?: string; "p_status"?: Database["public"]["Enums"]["request_status"]; "p_pending_page"?: number; "p_issues_page"?: number; "p_waiting_page"?: number }; Returns: Json
+{ Args: { "p_issues_page"?: number,"p_pending_page"?: number,"p_request_type"?: string,"p_status"?: Database["public"]['Enums']["request_status"],"p_waiting_page"?: number }; Returns: Json
                            },
 "get_hr_request_checks":
 { Args: { "p_request_id": string }; Returns: Json
+                           },
+"import_hr_knowledge":
+{ Args: { "p_chunks": Json,"p_sha256": string,"p_slug": string,"p_source_path": string,"p_title": string,"p_types": (string)[],"p_version": string }; Returns: Json
                            },
 "prepare_hr_approvals":
 { Args: { "p_request_id": string }; Returns: {
@@ -588,6 +645,12 @@ isOneToOne: false
                            },
 "queue_weekly_manager_digests":
 { Args: { "p_manager_id"?: string }; Returns: number
+                           },
+"retrieve_hr_knowledge":
+{ Args: { "p_lease_token": string,"p_query": string,"p_run_id": string }; Returns: Json
+                           },
+"search_hr_knowledge":
+{ Args: { "p_query": string,"p_request_type": string }; Returns: Json
                            },
 "submit_hr_request":
 { Args: { "p_request_id": string }; Returns: {

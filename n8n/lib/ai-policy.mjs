@@ -1,4 +1,5 @@
-export const promptVersion="hr-qualification-v2";
+import {sanitizeRagContext} from "./rag.mjs";
+export const promptVersion="hr-qualification-v3-rag";
 
 // Serializable into n8n Code nodes: no filesystem, network or database access.
 export function sanitizeAiInput(input){
@@ -30,7 +31,7 @@ export function sanitizeAiInput(input){
   if(!Number.isInteger(value)||value<0)throw new Error("ai_input_invalid");return value;
  };
  if(c.calculated_leave_days!==null&&c.calculated_leave_days!==undefined&&(!Number.isFinite(c.calculated_leave_days)||c.calculated_leave_days<0))throw new Error("ai_input_invalid");
- return {operation:"qualify",request,checks:{blocking_issues:[...c.blocking_issues],
+ return {operation:"qualify",request,...(input.rag?{rag:sanitizeRagContext(input.rag)}:{}),checks:{blocking_issues:[...c.blocking_issues],
   calculated_leave_days:c.calculated_leave_days??null,sufficient_leave_balance:c.sufficient_leave_balance===true,
   conflicting_requests:count(c.conflicting_requests,c.conflicting_request_ids),
   possible_duplicates:count(c.possible_duplicates,c.possible_duplicate_ids),requires_human_review:c.requires_human_review===true}};
