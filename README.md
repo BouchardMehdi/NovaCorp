@@ -28,13 +28,14 @@ Projet fil rouge **M1 DFS · Ingénierie de l'automatisation**. Une demande suit
 | Fonction | Comportement |
 | --- | --- |
 | Demandes RH | Congés, télétravail, matériel et formation ; brouillon, modification, soumission, suivi et annulation |
+| Navigation et listes | Menu adapté au rôle, page active, filtres immédiats de vue/type/statut et pagination de 5 demandes ; affichage mobile |
 | S1 — Notification manager | Qualification de la demande, activation du manager assigné et email dans MailHog |
 | S2 — Approbation multi-niveaux | Manager puis RH ; DRH au-delà d'un seuil ; décisions et changements de statut historisés |
 | S3 — Rappel automatique | Chaque matin à 8 h Paris, rappel au manager après **strictement plus de 48 h** d'attente ; une notification par étape et par jour |
 | Alertes RH | Échéance de 48 h pour chaque étape, contrôlée chaque minute ; une alerte par étape |
 | S4 — Digest hebdomadaire | Chaque lundi à 8 h Paris : reçues et finalement approuvées la semaine précédente, plus les attentes du manager |
 | S5 — Onboarding | Nouveau profil : bienvenue personnalisée et checklist de six étapes du premier jour, sans renvoi lors d'une mise à jour |
-| Supervision RH/DRH | Volumes, statuts, délais moyen/médian, validations en retard et incidents ; actualisation Realtime et rafraîchissement de secours |
+| Supervision RH/DRH | Volumes, statuts, délais moyen/médian, validations en retard et incidents ; filtres immédiats et trois listes paginées indépendantes ; actualisation Realtime et rafraîchissement de secours |
 
 Les pièces jointes privées sont modélisées et protégées en base/Storage ; leur dépôt et leur analyse ne sont pas exposés dans le front. Pas de chatbot, RAG, export PDF/Excel ou emails Slack. MailHog reçoit les emails de démonstration ; la récupération de mot de passe et les emails Supabase Auth ne sont pas configurés.
 

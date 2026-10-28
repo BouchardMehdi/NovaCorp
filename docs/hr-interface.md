@@ -4,7 +4,11 @@
 
 Depuis `/tableau-de-bord`, le salarié peut créer une demande de congés, télétravail, matériel ou formation, enregistrer un brouillon, le modifier, le soumettre et annuler une demande non terminée après confirmation.
 
-La liste affiche les demandes personnelles avec des filtres de type et de statut, et une pagination de 20 demandes. Le solde affiché concerne l’année courante. Le manager dispose d’une vue de son équipe ; les RH et la DRH disposent d’une vue des demandes accessibles à leur rôle. Les brouillons des autres salariés restent privés.
+La liste affiche les demandes personnelles avec des filtres de type et de statut, et une pagination de 5 demandes. Le solde affiché concerne l’année courante. Le manager dispose d’une vue de son équipe ; les RH et la DRH disposent d’une vue des demandes accessibles à leur rôle. Les brouillons des autres salariés restent privés.
+
+La navigation distingue la page active et propose les entrées adaptées au rôle : demandes personnelles, équipe pour les managers, toutes les demandes et supervision pour les RH/DRH, puis création d'une demande. Elle reste accessible sur mobile.
+
+Les filtres de vue, type et statut s'appliquent dès la sélection, sans bouton « Filtrer ». Ils reviennent à la première page. La pagination affiche les numéros de page, la plage de résultats et les liens précédent/suivant ; elle conserve les filtres dans l'URL et permet le retour navigateur. Une page devenue trop grande est ramenée à la dernière page disponible. Ces comportements couvrent les listes personnelles et celles de l'équipe/RH.
 
 La fiche présente les informations saisies, les étapes de validation et les 50 événements les plus récents. Elle se met à jour avec Supabase Realtime ; une actualisation de secours toutes les 10 secondes lorsque la page est visible et le retour au premier plan actualisent aussi les données.
 

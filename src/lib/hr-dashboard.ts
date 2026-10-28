@@ -1,4 +1,5 @@
 export interface DashboardData {
+ pending_page:number;issues_page:number;waiting_page:number;
  generated_at:string;total:number;active:number;pending_count:number;overdue_count:number;
  issue_count:number;workflow_issue_count:number;mail_issue_count:number;mail_queue_count:number;
  closed_count:number;average_hours:number|null;median_hours:number|null;

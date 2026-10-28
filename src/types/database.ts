@@ -550,6 +550,9 @@ isOneToOne: false
 "get_hr_dashboard":
 { Args: { "p_request_type"?: string }; Returns: Json
                            },
+"get_hr_dashboard_page":
+{ Args: { "p_request_type"?: string; "p_status"?: Database["public"]["Enums"]["request_status"]; "p_pending_page"?: number; "p_issues_page"?: number; "p_waiting_page"?: number }; Returns: Json
+                           },
 "get_hr_request_checks":
 { Args: { "p_request_id": string }; Returns: Json
                            },

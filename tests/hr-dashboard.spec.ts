@@ -52,10 +52,16 @@ test("la supervision est protégée pour visiteurs, salariés et managers",async
 test("les RH voient les compteurs exacts, les retards, les incidents et leurs liens",async({page})=>{
  await login(page,"rh@novacorp.test");await page.getByRole("link",{name:"Supervision RH",exact:true}).click();
  await expect(page.getByRole("heading",{name:"Supervision RH",exact:true})).toBeVisible();
- const report=(await hr.rpc("get_hr_dashboard")).data as {total:number;overdue_count:number};
+ await expect(page.getByRole("navigation",{name:"Navigation de l’espace"}).getByRole("link",{name:"Supervision RH",exact:true})).toHaveAttribute("aria-current","page");
+ const report=(await hr.rpc("get_hr_dashboard")).data as {total:number;overdue_count:number;pending_count:number};
  await expect(page.getByRole("region",{name:"Demandes soumises",exact:true}).locator("strong")).toHaveText(String(report.total));
  await expect(page.getByRole("region",{name:"Validations en retard",exact:true}).locator("strong")).toHaveText(String(report.overdue_count));
  const pending=page.locator("section").filter({has:page.getByRole("heading",{name:"Validations à suivre",exact:true})});
+ const pendingPagination=pending.getByRole("navigation",{name:"Pagination des validations"});
+ for(let current=1;current<Math.ceil(report.pending_count/5)&&await pending.getByRole("link",{name:new RegExp(title+"$")}).count()===0;current++){
+  await pendingPagination.getByRole("link",{name:"Page suivante",exact:true}).click();
+  await expect(pendingPagination).toContainText("Page "+(current+1)+" sur");
+ }
  await expect(pending.getByRole("link",{name:new RegExp(title+"$")})).toHaveAttribute("href","/tableau-de-bord/demandes/"+requestId);
  await expect(pending.getByText("En retard",{exact:true}).first()).toBeVisible();
  const incidents=page.locator("section").filter({has:page.getByRole("heading",{name:"Incidents d’automatisation et d’envoi",exact:true})});
@@ -67,11 +73,18 @@ test("les RH voient les compteurs exacts, les retards, les incidents et leurs li
 });
 test("le filtre s’applique à toute la supervision et la DRH y accède",async({page})=>{
  await login(page,"drh@novacorp.test");await page.getByRole("link",{name:"Supervision RH",exact:true}).click();
- await page.getByLabel("Type de demande").selectOption("training");await page.getByRole("button",{name:"Filtrer",exact:true}).click();
+ await expect(page.getByRole("heading",{name:"Supervision RH",exact:true})).toBeVisible();
+ await page.getByLabel("Type de demande").selectOption("training");
  await expect(page).toHaveURL(/type=training/);
  const report=(await hr.rpc("get_hr_dashboard",{p_request_type:"training"})).data as {total:number};
  await expect(page.getByRole("region",{name:"Demandes soumises",exact:true}).locator("strong")).toHaveText(String(report.total));
  await expect(page.getByRole("link",{name:new RegExp(title)})).toHaveCount(0);
+ await page.getByLabel("Statut",{exact:true}).selectOption("approved");
+ await expect(page).toHaveURL(/status=approved/);
+ const approved=(await hr.rpc("get_hr_dashboard_page",{p_request_type:"training",p_status:"approved"})).data as {total:number};
+ await expect(page.getByRole("region",{name:"Demandes soumises",exact:true}).locator("strong")).toHaveText(String(approved.total));
+ await expect(page.getByRole("navigation",{name:"Pagination des demandes en attente"})).toContainText("Page 1 sur 1");
+ await expect(page.getByRole("button",{name:"Filtrer",exact:true})).toHaveCount(0);
 });
 test("la supervision reste utilisable sur mobile",async({page})=>{
  await page.setViewportSize({width:390,height:844});await login(page,"rh@novacorp.test");
